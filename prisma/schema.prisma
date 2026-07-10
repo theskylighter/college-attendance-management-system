@@ -1,0 +1,171 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["nativeTypes"]
+}
+
+datasource db {
+  provider = "mysql"
+} 
+// ── Enums ──────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  FACULTY
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum SessionStatus {
+  SCHEDULED
+  HELD
+  CANCELLED
+  MAKEUP
+}
+
+enum DecisionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  studentProfile    StudentProfile?
+  facultyProfile    FacultyProfile?
+  markedSessions    LectureSession[]
+  attendanceRecords AttendanceRecord[]
+  correctionRequests CorrectionRequest[]
+}
+
+model Department {
+  id        Int       @id @default(autoincrement())
+  name      String
+  code      String    @unique
+  createdAt DateTime  @default(now())
+
+  sections  Section[]
+  subjects  Subject[]
+  faculties FacultyProfile[]
+}
+
+model Section {
+  id           Int      @id @default(autoincrement())
+  name         String
+  departmentId Int
+  batchYear    Int
+  programType  String   // 'UG' | 'PG' | 'PHD'
+  createdAt    DateTime @default(now())
+
+  department      Department       @relation(fields: [departmentId], references: [id])
+  studentProfiles StudentProfile[]
+  sectionSubjects SectionSubject[]
+}
+
+model StudentProfile {
+  id         Int    @id @default(autoincrement())
+  userId     Int    @unique
+  rollNumber String @unique
+  sectionId  Int
+
+  user    User    @relation(fields: [userId], references: [id])
+  section Section @relation(fields: [sectionId], references: [id])
+}
+
+model FacultyProfile {
+  id           Int    @id @default(autoincrement())
+  userId       Int    @unique
+  employeeId   String @unique
+  departmentId Int
+
+  user           User             @relation(fields: [userId], references: [id])
+  department     Department       @relation(fields: [departmentId], references: [id])
+  sectionSubjects SectionSubject[]
+}
+
+model Subject {
+  id                  Int      @id @default(autoincrement())
+  name                String
+  code                String   @unique
+  departmentId        Int
+  totalPlannedLectures Int
+  createdAt           DateTime @default(now())
+
+  department      Department       @relation(fields: [departmentId], references: [id])
+  sectionSubjects SectionSubject[]
+}
+
+model SectionSubject {
+  id               Int @id @default(autoincrement())
+  sectionId        Int
+  subjectId        Int
+  facultyProfileId Int
+
+  section        Section        @relation(fields: [sectionId], references: [id])
+  subject        Subject        @relation(fields: [subjectId], references: [id])
+  facultyProfile FacultyProfile @relation(fields: [facultyProfileId], references: [id])
+
+  lectureSessions LectureSession[]
+
+  @@unique([sectionId, subjectId])
+}
+
+model LectureSession {
+  id               Int           @id @default(autoincrement())
+  sectionSubjectId Int
+  date      DateTime
+  startTime String   // store as "HH:MM" string
+  endTime   String
+  status           SessionStatus @default(SCHEDULED)
+  markedById       Int?
+  createdAt        DateTime      @default(now())
+
+  sectionSubject    SectionSubject     @relation(fields: [sectionSubjectId], references: [id])
+  markedBy          User?              @relation(fields: [markedById], references: [id])
+  attendanceRecords AttendanceRecord[]
+}
+
+model AttendanceRecord {
+  id               Int              @id @default(autoincrement())
+  lectureSessionId Int
+  studentId        Int
+  status           AttendanceStatus
+  markedAt         DateTime         @default(now())
+  createdAt        DateTime         @default(now())
+
+  lectureSession     LectureSession      @relation(fields: [lectureSessionId], references: [id])
+  student            User                @relation(fields: [studentId], references: [id])
+  correctionRequests CorrectionRequest[]
+
+  @@unique([lectureSessionId, studentId])
+}
+
+model CorrectionRequest {
+  id                 Int            @id @default(autoincrement())
+  attendanceRecordId Int
+  studentId          Int
+  reason             String        
+  requestedAt        DateTime       @default(now())
+  facultyDecision    DecisionStatus @default(PENDING)
+  facultyDecisionAt  DateTime?
+  adminEscalated     Boolean        @default(false)
+  adminDecision      DecisionStatus?
+  adminDecisionAt    DateTime?
+
+  attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id])
+  student          User             @relation(fields: [studentId], references: [id])
+}
