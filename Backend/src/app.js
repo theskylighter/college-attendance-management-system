@@ -5,6 +5,8 @@ const cors = require('cors')
 // require all the routes here 
 const authRouter = require('./routes/auth.routes')
 const adminRouter = require('./routes/admin.routes')
+const facultyRouter = require('./routes/faculty.routes')
+const studentRouter = require('./routes/student.routes')
 
 const app = express()
 
@@ -15,6 +17,8 @@ app.use(express.json())
 // use all the routes here
 app.use('/api/admin', adminRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/faculty', facultyRouter)
+app.use('/api/student', studentRouter)
 
 // 404 handler
 app.use((req, res) => {
