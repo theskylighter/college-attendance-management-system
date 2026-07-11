@@ -20,6 +20,9 @@ app.use('/api/auth', authRouter)
 app.use('/api/faculty', facultyRouter)
 app.use('/api/student', studentRouter)
 
+// Health check
+app.get('/health', (req, res) => res.json({ status: 'ok' }))
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' })
