@@ -320,3 +320,130 @@ exports.removeSectionSubject = async (req, res, next) => {
     next(error)
   }
 }
+// ── Timetable Slots ──────────────────────────────────────
+
+exports.getTimetableSlots = async (req, res, next) => {
+  try {
+    const slots = await prisma.timetableSlot.findMany({
+      include: {
+        sectionSubject: {
+          include: {
+            section: true,
+            subject: true,
+            facultyProfile: { include: { user: { select: { name: true } } } }
+          }
+        }
+      },
+      orderBy: { dayOfWeek: 'asc' }
+    })
+    res.json(slots)
+  } catch (error) { next(error) }
+}
+
+exports.createTimetableSlot = async (req, res, next) => {
+  try {
+    const { sectionSubjectId, dayOfWeek, startTime, endTime } = req.body
+    if (!sectionSubjectId || dayOfWeek === undefined || !startTime || !endTime) {
+      return res.status(400).json({ error: 'All fields are required.' })
+    }
+    // dayOfWeek: 0 = Sunday, 1 = Monday ... 6 = Saturday
+    if (dayOfWeek < 0 || dayOfWeek > 6) {
+      return res.status(400).json({ error: 'dayOfWeek must be 0–6.' })
+    }
+    const slot = await prisma.timetableSlot.create({
+      data: {
+        sectionSubjectId: parseInt(sectionSubjectId),
+        dayOfWeek: parseInt(dayOfWeek),
+        startTime,
+        endTime
+      },
+      include: { sectionSubject: { include: { section: true, subject: true } } }
+    })
+    res.status(201).json(slot)
+  } catch (error) { next(error) }
+}
+
+exports.deleteTimetableSlot = async (req, res, next) => {
+  try {
+    await prisma.timetableSlot.delete({ where: { id: parseInt(req.params.id) } })
+    res.json({ message: 'Timetable slot deleted.' })
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Slot not found.' })
+    }
+    next(error)
+  }
+}
+
+// ── Generate Lecture Sessions ────────────────────────────
+// Takes a date range and creates LectureSession rows
+// for every timetable slot that falls on a matching day
+
+exports.generateLectureSessions = async (req, res, next) => {
+  try {
+    const { startDate, endDate, sectionSubjectId } = req.body
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required.' })
+    }
+
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+
+    if (start > end) {
+      return res.status(400).json({ error: 'startDate must be before endDate.' })
+    }
+
+    // Fetch relevant timetable slots
+    const whereClause = sectionSubjectId
+      ? { sectionSubjectId: parseInt(sectionSubjectId) }
+      : {}
+
+    const slots = await prisma.timetableSlot.findMany({
+      where: whereClause
+    })
+
+    if (slots.length === 0) {
+      return res.status(404).json({ error: 'No timetable slots found.' })
+    }
+
+    // Walk through every date in the range
+    // For each date, check if any slot matches that day of week
+    // If yes, create a LectureSession
+    const sessionsToCreate = []
+    const current = new Date(start)
+
+    while (current <= end) {
+      const dayOfWeek = current.getDay() // 0 = Sunday, 1 = Monday...
+
+      const matchingSlots = slots.filter(slot => slot.dayOfWeek === dayOfWeek)
+
+      for (const slot of matchingSlots) {
+        sessionsToCreate.push({
+          sectionSubjectId: slot.sectionSubjectId,
+          timetableSlotId: slot.id,
+          date: new Date(current),
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          status: 'SCHEDULED'
+        })
+      }
+
+      // Move to next day
+      current.setDate(current.getDate() + 1)
+    }
+
+    if (sessionsToCreate.length === 0) {
+      return res.status(400).json({ error: 'No sessions fall within this date range for given slots.' })
+    }
+
+    // Create all sessions in one transaction
+    const result = await prisma.$transaction(
+      sessionsToCreate.map(session => prisma.lectureSession.create({ data: session }))
+    )
+
+    res.status(201).json({
+      message: `${result.length} lecture sessions generated.`,
+      sessions: result
+    })
+  } catch (error) { next(error) }
+}

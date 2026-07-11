@@ -38,5 +38,10 @@ router.get('/section-subjects', adminController.getSectionSubjects)
 router.post('/section-subjects', adminController.assignFacultyToSubject)
 router.delete('/section-subjects/:id', adminController.removeSectionSubject)
 
+// Timetable
+router.get('/timetable/slots', adminController.getTimetableSlots)
+router.post('/timetable/slots', adminController.createTimetableSlot)
+router.delete('/timetable/slots/:id', adminController.deleteTimetableSlot)
+router.post('/timetable/generate-sessions', adminController.generateLectureSessions)
 
 module.exports = router
