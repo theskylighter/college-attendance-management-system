@@ -2,7 +2,9 @@ const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
 
+// require all the routes here 
 const authRouter = require('./routes/auth.routes')
+const adminRouter = require('./routes/admin.routes')
 
 const app = express()
 
@@ -10,6 +12,8 @@ app.use(cors())
 app.use(morgan('dev'))
 app.use(express.json())
 
+// use all the routes here
+app.use('/api/admin', adminRouter)
 app.use('/api/auth', authRouter)
 
 // 404 handler
