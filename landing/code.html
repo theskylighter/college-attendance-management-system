@@ -1,62 +1,82 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AcademiaLink | Coming July 2026</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
     <script id="tailwind-config">
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              primary: '#002147',
-              secondary: '#50606f',
-              background: '#faf9fd',
-              surface: '#ffffff',
-              accent: '#2d476f',
-              'primary-container': '#d6e3ff',
-              'on-primary-container': '#001b3d',
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-            spacing: {
-              'margin_desktop': '32px',
-              'container_max_width': '1440px',
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#002147',
+                        secondary: '#50606f',
+                        background: '#faf9fd',
+                        surface: '#ffffff',
+                        accent: '#2d476f',
+                        'primary-container': '#d6e3ff',
+                        'on-primary-container': '#001b3d',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    spacing: {
+                        'margin_desktop': '32px',
+                        'container_max_width': '1440px',
+                    }
+                }
             }
-          }
         }
-      }
     </script>
     <style>
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
+
         .blueprint-bg {
             background-color: #faf9fd;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(0, 33, 71, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(0, 33, 71, 0.03) 1px, transparent 1px);
             background-size: 40px 40px;
         }
+
         .dot-pattern {
             background-image: radial-gradient(rgba(0, 33, 71, 0.08) 1px, transparent 1px);
             background-size: 20px 20px;
         }
+
         @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
         }
-        .animate-float { animation: float 6s ease-in-out infinite; }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
         .timer-card {
             perspective: 1000px;
             transition: transform 0.3s ease;
         }
-        .timer-card:hover { transform: scale(1.05) translateY(-5px); }
+
+        .timer-card:hover {
+            transform: scale(1.05) translateY(-5px);
+        }
+
         .glass {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(10px);
@@ -64,6 +84,7 @@
         }
     </style>
 </head>
+
 <body class="font-sans text-[#1a1b1e] blueprint-bg min-h-screen">
 
     <!-- Top Navigation -->
@@ -79,7 +100,9 @@
                 <a href="#features" class="hover:text-primary transition-colors">Features</a>
                 <a href="#mission" class="hover:text-primary transition-colors">Mission</a>
                 <a href="#faq" class="hover:text-primary transition-colors">FAQ</a>
-                <button class="bg-primary text-white px-5 py-2 rounded-full hover:bg-opacity-90 transition-all shadow-lg shadow-primary/20">Join Waitlist</button>
+                <button
+                    class="bg-primary text-white px-5 py-2 rounded-full hover:bg-opacity-90 transition-all shadow-lg shadow-primary/20">Join
+                    Waitlist</button>
             </div>
         </div>
     </nav>
@@ -89,49 +112,59 @@
         <section class="max-w-container_max_width mx-auto px-margin_desktop text-center relative">
             <!-- Decorative Elements -->
             <div class="absolute top-0 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 animate-pulse"></div>
-            <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl -z-10 animate-float"></div>
+            <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl -z-10 animate-float">
+            </div>
 
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[11px] font-bold uppercase tracking-wider mb-8 border border-primary/10">
+            <div
+                class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[11px] font-bold uppercase tracking-wider mb-8 border border-primary/10">
                 <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                 </span>
                 Institutional Intelligence arriving 2026
             </div>
 
-            <h1 class="text-5xl md:text-7xl font-extrabold text-primary tracking-tight mb-6 max-w-4xl mx-auto leading-[1.1]">
-                The Future of Academic <br/> Management is <span class="text-accent underline decoration-primary/20 underline-offset-8">Arriving.</span>
+            <h1
+                class="text-5xl md:text-7xl font-extrabold text-primary tracking-tight mb-6 max-w-4xl mx-auto leading-[1.1]">
+                The Future of Academic <br /> Management is <span
+                    class="text-accent underline decoration-primary/20 underline-offset-8">Arriving.</span>
             </h1>
-            
+
             <p class="text-lg md:text-xl text-secondary max-w-2xl mx-auto mb-12 leading-relaxed">
-                Precision-engineered attendance, predictive analytics, and seamless institutional compliance. Built for the modern rhythm of higher education.
+                Precision-engineered attendance, predictive analytics, and seamless institutional compliance. Built for
+                the modern rhythm of higher education.
             </p>
 
             <!-- Countdown Timer -->
             <div class="flex flex-wrap justify-center gap-4 md:gap-8 mb-16" id="timer">
                 <div class="timer-card w-24 md:w-36 flex flex-col gap-2">
-                    <div class="h-24 md:h-32 bg-primary rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 relative overflow-hidden">
+                    <div
+                        class="h-24 md:h-32 bg-primary rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 relative overflow-hidden">
                         <div class="absolute inset-0 dot-pattern opacity-10"></div>
                         <span id="days" class="text-4xl md:text-5xl font-extrabold text-white">--</span>
                     </div>
                     <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary">Days</span>
                 </div>
                 <div class="timer-card w-24 md:w-36 flex flex-col gap-2">
-                    <div class="h-24 md:h-32 bg-primary rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 relative overflow-hidden">
+                    <div
+                        class="h-24 md:h-32 bg-primary rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 relative overflow-hidden">
                         <div class="absolute inset-0 dot-pattern opacity-10"></div>
                         <span id="hours" class="text-4xl md:text-5xl font-extrabold text-white">--</span>
                     </div>
                     <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary">Hours</span>
                 </div>
                 <div class="timer-card w-24 md:w-36 flex flex-col gap-2">
-                    <div class="h-24 md:h-32 bg-primary rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 relative overflow-hidden">
+                    <div
+                        class="h-24 md:h-32 bg-primary rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 relative overflow-hidden">
                         <div class="absolute inset-0 dot-pattern opacity-10"></div>
                         <span id="minutes" class="text-4xl md:text-5xl font-extrabold text-white">--</span>
                     </div>
                     <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary">Minutes</span>
                 </div>
                 <div class="timer-card w-24 md:w-36 flex flex-col gap-2">
-                    <div class="h-24 md:h-32 bg-primary rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 relative overflow-hidden">
+                    <div
+                        class="h-24 md:h-32 bg-primary rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 relative overflow-hidden">
                         <div class="absolute inset-0 dot-pattern opacity-10"></div>
                         <span id="seconds" class="text-4xl md:text-5xl font-extrabold text-white">--</span>
                     </div>
@@ -140,45 +173,73 @@
             </div>
 
             <!-- Lead Capture -->
-            <div class="max-w-xl mx-auto glass p-2 rounded-full shadow-xl flex items-center gap-2 mb-4 group focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                <div class="pl-6 text-secondary group-focus-within:text-primary transition-colors">
-                    <span class="material-symbols-outlined">mail</span>
-                </div>
-                <input type="email" placeholder="Enter institutional email address" class="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium py-3 px-2">
-                <button class="bg-primary text-white px-8 py-3 rounded-full font-bold text-sm hover:scale-[1.02] transition-transform active:scale-[0.98] shadow-lg shadow-primary/20">
-                    Join Waitlist
-                </button>
-            </div>
-            <p class="text-xs text-secondary font-medium italic">Join 400+ institutions already on the early access list.</p>
-        </section>
+            <div id="form-container" class="max-w-xl mx-auto mb-4">
+                <form id="waitlist-form"
+                    action="https://github.us19.list-manage.com/subscribe/post?u=b827ea079283bd5376a0c63ed&id=f3da49cce4&f_id=004147e7f0"
+                    method="POST"
+                    class="glass p-2 rounded-full shadow-xl flex items-center gap-2 group focus-within:ring-2 focus-within:ring-primary/20 transition-all">
 
-        <!-- Features Section -->
-        <section id="features" class="max-w-container_max_width mx-auto px-margin_desktop mt-32 grid md:grid-cols-3 gap-8">
-            <div class="glass p-8 rounded-3xl group hover:border-primary/30 transition-all duration-500">
-                <div class="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-500 group-hover:rotate-6">
-                    <span class="material-symbols-outlined text-3xl">radar</span>
+                    <div class="pl-6 text-secondary group-focus-within:text-primary transition-colors">
+                        <span class="material-symbols-outlined">mail</span>
+                    </div>
+
+                    <input type="email" name="EMAIL" placeholder="Enter institutional email address" required
+                        class="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium py-3 px-2">
+
+                    <div style="position: absolute; left: -5000px;" aria-hidden="true">
+                        <input type="text" name="b_b827ea079283bd5376a0c63ed_f3da49cce4" tabindex="-1" value="">
+                    </div>
+
+                    <button type="submit"
+                        class="bg-primary text-white px-8 py-3 rounded-full font-bold text-sm hover:scale-[1.02] transition-transform active:scale-[0.98] shadow-lg shadow-primary/20">
+                        Join Waitlist
+                    </button>
+                </form>
+
+                <div id="success-message" class="hidden text-center py-3 text-sm font-bold text-green-500">
+                    🎉 Thank you! You've been added to the early access list.
                 </div>
-                <h3 class="text-xl font-bold text-primary mb-3">Real-Time Tracking</h3>
-                <p class="text-sm text-secondary leading-relaxed">Smart scanning and instant reporting. Monitor attendance across lecture halls with sub-second precision.</p>
-            </div>
-            <div class="glass p-8 rounded-3xl group hover:border-primary/30 transition-all duration-500">
-                <div class="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-500 group-hover:rotate-6">
-                    <span class="material-symbols-outlined text-3xl">query_stats</span>
+
+                <div id="error-message" class="hidden text-center py-2 text-xs text-red-500 font-medium mt-2">
                 </div>
-                <h3 class="text-xl font-bold text-primary mb-3">Predictive Analytics</h3>
-                <p class="text-sm text-secondary leading-relaxed">Identify academic risk before it becomes an issue. Proprietary models that predict institutional bottlenecks.</p>
             </div>
-            <div class="glass p-8 rounded-3xl group hover:border-primary/30 transition-all duration-500">
-                <div class="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-500 group-hover:rotate-6">
-                    <span class="material-symbols-outlined text-3xl">verified_user</span>
+            <p class="text-xs text-secondary font-medium italic">Join 10+ institutions already on the early access
+                list.</p>
+            <!-- Features Section -->
+            <section id="features"
+                class="max-w-container_max_width mx-auto px-margin_desktop mt-32 grid md:grid-cols-3 gap-8">
+                <div class="glass p-8 rounded-3xl group hover:border-primary/30 transition-all duration-500">
+                    <div
+                        class="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-500 group-hover:rotate-6">
+                        <span class="material-symbols-outlined text-3xl">radar</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-primary mb-3">Real-Time Tracking</h3>
+                    <p class="text-sm text-secondary leading-relaxed">Smart scanning and instant reporting. Monitor
+                        attendance across lecture halls with sub-second precision.</p>
                 </div>
-                <h3 class="text-xl font-bold text-primary mb-3">Compliance Ready</h3>
-                <p class="text-sm text-secondary leading-relaxed">FERPA-compliant and audit-ready reporting that meets the highest international academic standards.</p>
-            </div>
-        </section>
+                <div class="glass p-8 rounded-3xl group hover:border-primary/30 transition-all duration-500">
+                    <div
+                        class="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-500 group-hover:rotate-6">
+                        <span class="material-symbols-outlined text-3xl">query_stats</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-primary mb-3">Predictive Analytics</h3>
+                    <p class="text-sm text-secondary leading-relaxed">Identify academic risk before it becomes an issue.
+                        Proprietary models that predict institutional bottlenecks.</p>
+                </div>
+                <div class="glass p-8 rounded-3xl group hover:border-primary/30 transition-all duration-500">
+                    <div
+                        class="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-500 group-hover:rotate-6">
+                        <span class="material-symbols-outlined text-3xl">verified_user</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-primary mb-3">Compliance Ready</h3>
+                    <p class="text-sm text-secondary leading-relaxed">FERPA-compliant and audit-ready reporting that
+                        meets the highest international academic standards.</p>
+                </div>
+            </section>
     </main>
 
-    <footer class="max-w-container_max_width mx-auto px-margin_desktop py-12 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-6">
+    <footer
+        class="max-w-container_max_width mx-auto px-margin_desktop py-12 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-6">
         <div class="flex items-center gap-2">
             <span class="font-bold text-lg text-primary">AcademiaLink</span>
             <span class="text-xs text-secondary font-medium">© 2024 Institutional Excellence.</span>
@@ -212,5 +273,46 @@
         setInterval(updateTimer, 1000);
         updateTimer();
     </script>
+    <script>
+        document.getElementById('waitlist-form').addEventListener('submit', function (e) {
+            e.preventDefault(); // Stop the page from reloading or opening a new tab
+
+            const form = e.target;
+            const email = form.querySelector('input[name="EMAIL"]').value;
+            const botField = form.querySelector('input[name="b_b827ea079283bd5376a0c63ed_f3da49cce4"]').value;
+
+            if (botField) return; // Silently fail if a bot filled the hidden field
+
+            // 1. Convert standard Mailchimp URL to a JSONP background endpoint
+            const actionUrl = form.action.replace('/subscribe/post', '/subscribe/post-json');
+
+            // 2. Construct the URL with the user's email and our callback function
+            const scriptUrl = `${actionUrl}&EMAIL=${encodeURIComponent(email)}&c=mailchimpCallback`;
+
+            // 3. Inject a temporary script tag to bypass browser CORS restrictions
+            const script = document.createElement('script');
+            script.src = scriptUrl;
+            document.body.appendChild(script);
+        });
+
+        // 4. The function Mailchimp triggers automatically when it replies
+        window.mailchimpCallback = function (data) {
+            const form = document.getElementById('waitlist-form');
+            const successMsg = document.getElementById('success-message');
+            const errorMsg = document.getElementById('error-message');
+
+            if (data.result === 'success') {
+                form.style.display = 'none'; // Hide the input form
+                errorMsg.classList.add('hidden'); // Hide any previous errors
+                successMsg.classList.remove('hidden'); // Show the success message
+            } else {
+                // Mailchimp sometimes sends HTML in the error message, so we display it here
+                errorMsg.innerHTML = data.msg || 'Something went wrong. Please try again.';
+                errorMsg.classList.remove('hidden');
+            }
+        };
+    </script>
+
 </body>
+
 </html>
