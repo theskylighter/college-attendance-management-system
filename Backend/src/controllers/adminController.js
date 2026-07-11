@@ -447,3 +447,319 @@ exports.generateLectureSessions = async (req, res, next) => {
     })
   } catch (error) { next(error) }
 }
+const ExcelJS = require('exceljs')
+const PDFDocument = require('pdfkit')
+
+// ── Defaulters List ───────────────────────────────────────
+// Query: ?sectionId=1&subjectId=2&threshold=75
+
+exports.getDefaulters = async (req, res, next) => {
+  try {
+    const { sectionId, subjectId, threshold = 75 } = req.query
+
+    if (!sectionId) {
+      return res.status(400).json({ error: 'sectionId is required.' })
+    }
+
+    // Get all sectionSubjects for this section
+    const whereClause = {
+      sectionId: parseInt(sectionId),
+      ...(subjectId && { subjectId: parseInt(subjectId) })
+    }
+
+    const sectionSubjects = await prisma.sectionSubject.findMany({
+      where: whereClause,
+      include: { subject: true }
+    })
+
+    if (sectionSubjects.length === 0) {
+      return res.status(404).json({ error: 'No subjects found for this section.' })
+    }
+
+    // Get all students in this section
+    const students = await prisma.studentProfile.findMany({
+      where: { sectionId: parseInt(sectionId) },
+      include: { user: { select: { id: true, name: true, email: true } } }
+    })
+
+    // For each student + subject combination, calculate attendance
+    const defaulters = []
+
+    for (const student of students) {
+      for (const ss of sectionSubjects) {
+        const totalSessions = await prisma.lectureSession.count({
+          where: { sectionSubjectId: ss.id, status: 'HELD' }
+        })
+
+        if (totalSessions === 0) continue
+
+        const presentCount = await prisma.attendanceRecord.count({
+          where: {
+            lectureSession: { sectionSubjectId: ss.id },
+            studentId: student.userId,
+            status: { in: ['PRESENT', 'LATE'] }
+          }
+        })
+
+        const percentage = Math.round((presentCount / totalSessions) * 100)
+
+        if (percentage < parseInt(threshold)) {
+          defaulters.push({
+            studentId: student.userId,
+            name: student.user.name,
+            email: student.user.email,
+            rollNumber: student.rollNumber,
+            subjectId: ss.subject.id,
+            subjectName: ss.subject.name,
+            subjectCode: ss.subject.code,
+            totalSessions,
+            attended: presentCount,
+            percentage
+          })
+        }
+      }
+    }
+
+    // Sort by percentage ascending (worst first)
+    defaulters.sort((a, b) => a.percentage - b.percentage)
+
+    res.json({
+      threshold: parseInt(threshold),
+      totalDefaulters: defaulters.length,
+      defaulters
+    })
+  } catch (error) { next(error) }
+}
+
+// ── Attendance Summary ────────────────────────────────────
+// Query: ?sectionId=1
+
+exports.getAttendanceSummary = async (req, res, next) => {
+  try {
+    const { sectionId } = req.query
+
+    if (!sectionId) {
+      return res.status(400).json({ error: 'sectionId is required.' })
+    }
+
+    const students = await prisma.studentProfile.findMany({
+      where: { sectionId: parseInt(sectionId) },
+      include: { user: { select: { id: true, name: true, email: true } } }
+    })
+
+    const sectionSubjects = await prisma.sectionSubject.findMany({
+      where: { sectionId: parseInt(sectionId) },
+      include: { subject: true }
+    })
+
+    const summary = await Promise.all(
+      students.map(async (student) => {
+        const subjects = await Promise.all(
+          sectionSubjects.map(async (ss) => {
+            const totalSessions = await prisma.lectureSession.count({
+              where: { sectionSubjectId: ss.id, status: 'HELD' }
+            })
+
+            const presentCount = await prisma.attendanceRecord.count({
+              where: {
+                lectureSession: { sectionSubjectId: ss.id },
+                studentId: student.userId,
+                status: { in: ['PRESENT', 'LATE'] }
+              }
+            })
+
+            const percentage = totalSessions === 0
+              ? 0
+              : Math.round((presentCount / totalSessions) * 100)
+
+            return {
+              subjectName: ss.subject.name,
+              subjectCode: ss.subject.code,
+              totalSessions,
+              attended: presentCount,
+              percentage
+            }
+          })
+        )
+
+        return {
+          studentId: student.userId,
+          name: student.user.name,
+          rollNumber: student.rollNumber,
+          subjects
+        }
+      })
+    )
+
+    res.json(summary)
+  } catch (error) { next(error) }
+}
+
+// ── Export Excel ──────────────────────────────────────────
+// Query: ?sectionId=1&threshold=75
+
+exports.exportExcel = async (req, res, next) => {
+  try {
+    const { sectionId, threshold = 75 } = req.query
+
+    if (!sectionId) {
+      return res.status(400).json({ error: 'sectionId is required.' })
+    }
+
+    // Reuse defaulters logic
+    const sectionSubjects = await prisma.sectionSubject.findMany({
+      where: { sectionId: parseInt(sectionId) },
+      include: { subject: true }
+    })
+
+    const students = await prisma.studentProfile.findMany({
+      where: { sectionId: parseInt(sectionId) },
+      include: { user: { select: { id: true, name: true, email: true } } }
+    })
+
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet('Attendance Report')
+
+    // Build header row dynamically from subjects
+    const subjectHeaders = sectionSubjects.map(ss => ss.subject.code)
+    sheet.columns = [
+      { header: 'Roll Number', key: 'roll', width: 15 },
+      { header: 'Name', key: 'name', width: 25 },
+      ...subjectHeaders.map(code => ({ header: code, key: code, width: 12 })),
+      { header: 'Overall %', key: 'overall', width: 12 }
+    ]
+
+    // Style header row
+    sheet.getRow(1).font = { bold: true }
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' }
+    }
+
+    for (const student of students) {
+      const rowData = {
+        roll: student.rollNumber,
+        name: student.user.name
+      }
+
+      let totalPresent = 0
+      let totalSessions = 0
+
+      for (const ss of sectionSubjects) {
+        const total = await prisma.lectureSession.count({
+          where: { sectionSubjectId: ss.id, status: 'HELD' }
+        })
+        const present = await prisma.attendanceRecord.count({
+          where: {
+            lectureSession: { sectionSubjectId: ss.id },
+            studentId: student.userId,
+            status: { in: ['PRESENT', 'LATE'] }
+          }
+        })
+        const pct = total === 0 ? 0 : Math.round((present / total) * 100)
+        rowData[ss.subject.code] = `${pct}%`
+        totalPresent += present
+        totalSessions += total
+      }
+
+      const overallPct = totalSessions === 0
+        ? 0
+        : Math.round((totalPresent / totalSessions) * 100)
+
+      rowData.overall = `${overallPct}%`
+      const row = sheet.addRow(rowData)
+
+      // Highlight defaulters in red
+      if (overallPct < parseInt(threshold)) {
+        row.font = { color: { argb: 'FFFF0000' } }
+      }
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', 'attachment; filename=attendance-report.xlsx')
+
+    await workbook.xlsx.write(res)
+    res.end()
+  } catch (error) { next(error) }
+}
+
+// ── Export PDF ────────────────────────────────────────────
+// Query: ?sectionId=1&threshold=75
+
+exports.exportPdf = async (req, res, next) => {
+  try {
+    const { sectionId, threshold = 75 } = req.query
+
+    if (!sectionId) {
+      return res.status(400).json({ error: 'sectionId is required.' })
+    }
+
+    const section = await prisma.section.findUnique({
+      where: { id: parseInt(sectionId) },
+      include: { department: true }
+    })
+
+    const students = await prisma.studentProfile.findMany({
+      where: { sectionId: parseInt(sectionId) },
+      include: { user: { select: { id: true, name: true } } }
+    })
+
+    const sectionSubjects = await prisma.sectionSubject.findMany({
+      where: { sectionId: parseInt(sectionId) },
+      include: { subject: true }
+    })
+
+    const doc = new PDFDocument({ margin: 40 })
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'attachment; filename=attendance-report.pdf')
+    doc.pipe(res)
+
+    // Title
+    doc.fontSize(18).font('Helvetica-Bold')
+      .text('Attendance Report', { align: 'center' })
+    doc.fontSize(12).font('Helvetica')
+      .text(`Section: ${section.name} | Department: ${section.department.name}`, { align: 'center' })
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, { align: 'center' })
+    doc.moveDown(2)
+
+    // One block per student
+    for (const student of students) {
+      doc.fontSize(12).font('Helvetica-Bold')
+        .text(`${student.rollNumber} — ${student.user.name}`)
+      doc.font('Helvetica').fontSize(10)
+
+      let totalPresent = 0
+      let totalSessions = 0
+
+      for (const ss of sectionSubjects) {
+        const total = await prisma.lectureSession.count({
+          where: { sectionSubjectId: ss.id, status: 'HELD' }
+        })
+        const present = await prisma.attendanceRecord.count({
+          where: {
+            lectureSession: { sectionSubjectId: ss.id },
+            studentId: student.userId,
+            status: { in: ['PRESENT', 'LATE'] }
+          }
+        })
+        const pct = total === 0 ? 0 : Math.round((present / total) * 100)
+        const flag = pct < parseInt(threshold) ? ' ⚠ DEFAULTER' : ''
+        doc.text(`  ${ss.subject.code}: ${present}/${total} (${pct}%)${flag}`)
+        totalPresent += present
+        totalSessions += total
+      }
+
+      const overallPct = totalSessions === 0
+        ? 0
+        : Math.round((totalPresent / totalSessions) * 100)
+
+      doc.font('Helvetica-Bold')
+        .text(`  Overall: ${overallPct}%`)
+      doc.moveDown(1)
+    }
+
+    doc.end()
+  } catch (error) { next(error) }
+}

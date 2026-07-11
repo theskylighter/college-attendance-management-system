@@ -44,4 +44,10 @@ router.post('/timetable/slots', adminController.createTimetableSlot)
 router.delete('/timetable/slots/:id', adminController.deleteTimetableSlot)
 router.post('/timetable/generate-sessions', adminController.generateLectureSessions)
 
+// Reports
+router.get('/reports/defaulters', adminController.getDefaulters)
+router.get('/reports/summary', adminController.getAttendanceSummary)
+router.get('/reports/export/excel', adminController.exportExcel)
+router.get('/reports/export/pdf', adminController.exportPdf)
+
 module.exports = router
