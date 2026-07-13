@@ -121,6 +121,7 @@ model SectionSubject {
   facultyProfile FacultyProfile @relation(fields: [facultyProfileId], references: [id])
 
   lectureSessions LectureSession[]
+  timetableSlots  TimetableSlot[]
 
   @@unique([sectionId, subjectId])
 }
@@ -169,4 +170,15 @@ model CorrectionRequest {
 
   attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id])
   student          User             @relation(fields: [studentId], references: [id])
+}
+
+model TimetableSlot {
+  id               Int      @id @default(autoincrement())
+  sectionSubjectId Int
+  dayOfWeek        Int      // 0 = Sunday, 1 = Monday ... 6 = Saturday
+  startTime        String
+  endTime          String
+  createdAt        DateTime @default(now())
+
+  sectionSubject   SectionSubject @relation(fields: [sectionSubjectId], references: [id])
 }
