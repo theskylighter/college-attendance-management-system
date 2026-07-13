@@ -420,7 +420,6 @@ exports.generateLectureSessions = async (req, res, next) => {
       for (const slot of matchingSlots) {
         sessionsToCreate.push({
           sectionSubjectId: slot.sectionSubjectId,
-          timetableSlotId: slot.id,
           date: new Date(current),
           startTime: slot.startTime,
           endTime: slot.endTime,
