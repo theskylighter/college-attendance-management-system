@@ -13,7 +13,6 @@ enum Role {
   STUDENT
   FACULTY
   ADMIN
-  SUPER_ADMIN
 }
 
 enum AttendanceStatus {

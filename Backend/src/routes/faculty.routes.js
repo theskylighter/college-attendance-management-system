@@ -4,7 +4,7 @@ const { authenticate, authorizeRoles } = require('../middlewares/auth')
 const facultyController = require('../controllers/facultyController')
 
 router.use(authenticate)
-router.use(authorizeRoles('FACULTY', 'ADMIN', 'SUPER_ADMIN'))
+router.use(authorizeRoles('FACULTY', 'ADMIN'))
 
 // Schedule
 router.get('/schedule', facultyController.getSchedule)

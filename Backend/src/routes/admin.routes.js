@@ -3,9 +3,9 @@ const router = express.Router()
 const { authenticate, authorizeRoles } = require('../middlewares/auth')
 const adminController = require('../controllers/adminController')
 
-// All admin routes require authentication + ADMIN or SUPER_ADMIN role
+// All admin routes require authentication + ADMIN role
 router.use(authenticate)
-router.use(authorizeRoles('ADMIN', 'SUPER_ADMIN'))
+router.use(authorizeRoles('ADMIN'))
 
 // Departments
 router.get('/departments', adminController.getDepartments)
