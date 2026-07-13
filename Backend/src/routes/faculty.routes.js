@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { authenticate, authorizeRoles } = require('../middleware/auth')
+const { authenticate, authorizeRoles } = require('../middlewares/auth')
 const facultyController = require('../controllers/facultyController')
 
 router.use(authenticate)
