@@ -5,15 +5,11 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // 1. Authentication Middleware (Verifies the token)
 const authenticate = (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token = req.cookies?.token;
 
-    // Check if the Authorization header exists and starts with "Bearer "
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
-
-    // Extract the token (e.g., "Bearer eyJhbGciOiJIUzI1NiIsIn...")
-    const token = authHeader.split(' ')[1];
 
     // Verify the token
     const decoded = jwt.verify(token, JWT_SECRET);

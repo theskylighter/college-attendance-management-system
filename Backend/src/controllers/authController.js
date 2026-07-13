@@ -74,9 +74,16 @@ const login = async (req, res, next) => {
       { expiresIn: '1d' }
     )
 
+    // Set token in HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    })
+
     return res.status(200).json({
       message: 'Login successful.',
-      token,
       user: { id: user.id, email: user.email, role: user.role },
     })
   } catch (error) {
@@ -85,9 +92,28 @@ const login = async (req, res, next) => {
 }
 
 const logout = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  })
   return res.status(200).json({
-    message: 'Logged out successfully. Remove token from client storage.',
+    message: 'Logged out successfully.',
   })
 }
 
-module.exports = { register, login, logout }
+const getMe = async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId } })
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' })
+    }
+    return res.status(200).json({
+      user: { id: user.id, name: user.name, email: user.email, role: user.role }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+module.exports = { register, login, logout, getMe }
