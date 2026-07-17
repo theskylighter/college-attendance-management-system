@@ -61,6 +61,10 @@ const Register = () => {
       setError("Complete all fields and accept the terms to continue.");
       return;
     }
+    if (password.trim().length <7) {
+      setError("Password must be 6+ characters");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -75,8 +79,8 @@ const Register = () => {
       await handleRegister({ fullName, email, role, password, profileData });
       navigate("/login");
     } catch (err) {
-      // 3. Handle errors locally so the user knows what went wrong
       setError(err.message || "Registration failed. Please try again.");
+
     }
   };
 
