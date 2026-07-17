@@ -38,11 +38,12 @@ const Register = () => {
 
   const passwordType = showPassword ? "text" : "password";
 
-  const isProfileValid = role === "STUDENT" 
-    ? rollNumber.trim() && sectionId.trim() 
-    : role === "FACULTY" 
-      ? employeeId.trim() && departmentId.trim() 
-      : true;
+  const isProfileValid =
+    role === "STUDENT"
+      ? rollNumber.trim() && sectionId.trim()
+      : role === "FACULTY"
+        ? employeeId.trim() && departmentId.trim()
+        : true;
 
   const canSubmit =
     fullName.trim() &&
@@ -66,12 +67,17 @@ const Register = () => {
       return;
     }
 
-    const profileData = role === "STUDENT" 
-      ? { rollNumber, sectionId } 
-      : { employeeId, departmentId };
-
-    await handleRegister({ fullName, email, role, password, profileData });
-    navigate("/login")
+    const profileData =
+      role === "STUDENT"
+        ? { rollNumber, sectionId }
+        : { employeeId, departmentId };
+    try {
+      await handleRegister({ fullName, email, role, password, profileData });
+      navigate("/login");
+    } catch (err) {
+      // 3. Handle errors locally so the user knows what went wrong
+      setError(err.message || "Registration failed. Please try again.");
+    }
   };
 
   return (
@@ -111,7 +117,7 @@ const Register = () => {
 
       {/* Main Content Container */}
       <main className="relative z-10 flex w-full flex-1 flex-col items-center justify-center px-4 py-4 sm:px-6 lg:px-8">
-        <section className="grid w-full max-w-6xl overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] md:grid-cols-[0.92fr_1.08fr]">
+        <section className="grid w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] md:grid-cols-[0.92fr_1.08fr]">
           {/* Left Side: Hero Banner */}
           <aside className="relative hidden min-h-full overflow-hidden bg-[#0b2a55] md:block">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.18),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.12),transparent_38%)]" />

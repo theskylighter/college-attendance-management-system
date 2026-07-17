@@ -85,7 +85,7 @@ const Login = () => {
 
       {/* Main Content */}
       <main className="relative z-10 flex w-full flex-1 flex-col items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
-        <section className="grid w-full max-w-6xl overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] md:grid-cols-[0.92fr_1.08fr]">
+        <section className="grid w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] md:grid-cols-[0.92fr_1.08fr]">
           
           {/* Left Side: Hero Image & Branding */}
           <aside className="relative hidden min-h-full overflow-hidden bg-[#0b2a55] md:block">

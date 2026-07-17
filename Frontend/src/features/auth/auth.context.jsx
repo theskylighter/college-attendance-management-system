@@ -1,11 +1,12 @@
 import { createContext, useState } from "react";
 import { useEffect } from "react";
-import api from "../../lib/axios";
+import { useNavigate } from "react-router-dom";
 import { login, register, getme, logout } from "./services/auth.api";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +45,14 @@ export const AuthProvider = ({ children }) => {
         if(data.user) {
           console.log("setting user as:",data.user)
           setUser(data.user);
-
+          if(data.user.role ==='STUDENT'){
+            navigate("/student/dashboard")
+          }
+          else if(data.user.role ==='FACULTY'){
+            navigate("/faculty/schedule")
+          }
+          else
+            navigate("/admin/dashboard")
         }
       } catch (err) {
         console.log(err);
