@@ -28,14 +28,39 @@ const register = async (req, res, next) => {
     // 3. Hash password
     const passwordHash = await bcrypt.hash(password, 10)
 
-    // 4. Create user
-    const newUser = await prisma.user.create({
-      data: { name, email, passwordHash, role },
+    // 4. Create user and associated role‑specific profile in a single transaction
+    const newUser = await prisma.$transaction(async (tx) => {
+      // Base user creation
+      const user = await tx.user.create({
+        data: { name, email, passwordHash, role },
+      })
+
+      // Role‑specific nested profile creation
+      if (role === 'STUDENT') {
+        await tx.studentProfile.create({
+          data: {
+            userId: user.id,
+            rollNumber: req.body.rollNumber,
+            sectionId: parseInt(req.body.sectionId),
+          },
+        })
+      } else if (role === 'FACULTY') {
+        await tx.facultyProfile.create({
+          data: {
+            userId: user.id,
+            employeeId: req.body.employeeId,
+            departmentId: parseInt(req.body.departmentId),
+          },
+        })
+      }
+      return user
     })
 
+    // Strip password hash from response
+    const { passwordHash: _, ...safeUser } = newUser
     return res.status(201).json({
       message: 'User registered successfully.',
-      user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role },
+      user: safeUser,
     })
   } catch (error) {
     next(error) // passes to global error handler in app.js

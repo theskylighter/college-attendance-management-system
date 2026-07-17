@@ -31,14 +31,26 @@ const Register = () => {
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
 
+  const [rollNumber, setRollNumber] = useState("");
+  const [sectionId, setSectionId] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+
   const passwordType = showPassword ? "text" : "password";
+
+  const isProfileValid = role === "STUDENT" 
+    ? rollNumber.trim() && sectionId.trim() 
+    : role === "FACULTY" 
+      ? employeeId.trim() && departmentId.trim() 
+      : true;
 
   const canSubmit =
     fullName.trim() &&
     email.trim() &&
     password.trim() &&
     confirmPassword.trim() &&
-    agreed;
+    agreed &&
+    isProfileValid;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -54,7 +66,11 @@ const Register = () => {
       return;
     }
 
-    await handleRegister({ fullName, email, role, password });
+    const profileData = role === "STUDENT" 
+      ? { rollNumber, sectionId } 
+      : { employeeId, departmentId };
+
+    await handleRegister({ fullName, email, role, password, profileData });
     navigate("/login")
   };
 
@@ -194,6 +210,46 @@ const Register = () => {
                   })}
                 </div>
               </div>
+
+              {/* Conditional Profile Fields */}
+              {role === "STUDENT" && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field
+                    id="roll-number"
+                    label="Roll Number"
+                    value={rollNumber}
+                    onChange={setRollNumber}
+                    placeholder="e.g. 21CS101"
+                  />
+                  <Field
+                    id="section-id"
+                    label="Section ID"
+                    type="number"
+                    value={sectionId}
+                    onChange={setSectionId}
+                    placeholder="e.g. 1"
+                  />
+                </div>
+              )}
+              {role === "FACULTY" && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field
+                    id="employee-id"
+                    label="Employee ID"
+                    value={employeeId}
+                    onChange={setEmployeeId}
+                    placeholder="e.g. EMP990"
+                  />
+                  <Field
+                    id="department-id"
+                    label="Department ID"
+                    type="number"
+                    value={departmentId}
+                    onChange={setDepartmentId}
+                    placeholder="e.g. 2"
+                  />
+                </div>
+              )}
 
               {/* Row 3: Passwords side-by-side */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

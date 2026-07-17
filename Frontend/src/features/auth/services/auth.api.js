@@ -1,12 +1,13 @@
 import api from "../../../lib/axios";
 
 // register
-export async function register({ fullName, email, role, password }) {
+export async function register({ fullName, email, role, password, profileData }) {
     const response = await api.post("/api/auth/register", {
       name: fullName,
       email,
       password,
       role,
+      ...profileData
     });
     return response.data;
 

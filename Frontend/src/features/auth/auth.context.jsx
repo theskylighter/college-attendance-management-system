@@ -21,10 +21,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   // handleRegister controller
-  const handleRegister = async({ fullName, email, password, role }) => {
+  const handleRegister = async({ fullName, email, password, role, profileData }) => {
     setLoading(true);
     // call the actual api from auth.api.js
-    const data = await register({ fullName, email, password, role });
+    const data = await register({ fullName, email, password, role, profileData });
     setLoading(false);
   };
 
