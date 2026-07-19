@@ -10,6 +10,10 @@ router.use(authorizeRoles('STUDENT'))
 router.get('/attendance', studentController.getAttendanceSummary)
 router.get('/attendance/:subjectId', studentController.getAttendanceBySubject)
 
+// Courses & Schedule
+router.get('/courses',studentController.getCourses)
+router.get('/schedule',studentController.getSchedule)
+
 // Corrections
 router.post('/corrections', studentController.raiseCorrection)
 router.get('/corrections', studentController.getMyCorrections)

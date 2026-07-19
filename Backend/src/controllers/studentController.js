@@ -125,6 +125,113 @@ exports.getAttendanceBySubject = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+// ── Student Courses ──────────────────────────────────────────
+// Returns a list of all subjects/courses the student is enrolled in
+
+exports.getCourses = async (req, res, next) => {
+  try {
+    // 1. Get the student's profile to find their sectionId
+    const studentProfile = await prisma.studentProfile.findUnique({
+      where: { userId: req.user.userId }
+    });
+
+    if (!studentProfile) {
+      return res.status(404).json({ error: 'Student profile not found.' });
+    }
+
+    // 2. Fetch all section subjects for this section, including subject and faculty details
+    const sectionSubjects = await prisma.sectionSubject.findMany({
+      where: { sectionId: studentProfile.sectionId },
+      include: {
+        subject: true,
+        facultyProfile: {
+          include: {
+            user: {
+              select: { name: true, email: true }
+            }
+          }
+        }
+      }
+    });
+
+    // 3. Format the response data
+    const courses = sectionSubjects.map((ss) => ({
+      sectionSubjectId: ss.id,
+      subjectId: ss.subject.id,
+      subjectName: ss.subject.name,
+      subjectCode: ss.subject.code,
+      facultyName: ss.facultyProfile?.user?.name || 'Unassigned',
+      facultyEmail: ss.facultyProfile?.user?.email || null,
+      totalPlannedLectures: ss.subject.totalPlannedLectures
+    }));
+
+    res.json(courses);
+  } catch (error) {
+    next(error);
+  }
+};
+// ── Today's Schedule ─────────────────────────────────────────
+// Returns the timetable slots for the logged-in student for the current day
+
+exports.getSchedule = async (req, res, next) => {
+  try {
+    // 1. Get the student's profile for the sectionId
+    const studentProfile = await prisma.studentProfile.findUnique({
+      where: { userId: req.user.userId }
+    });
+
+    if (!studentProfile) {
+      return res.status(404).json({ error: 'Student profile not found.' });
+    }
+
+    // 2. Determine today's day of the week
+    // JS getDay() returns 0 (Sunday) to 6 (Saturday). Ensure this matches your DB logic.
+    const currentDayOfWeek = new Date().getDay();
+
+    // 3. Query timetable slots for today that match the student's section subjects
+    const todaySlots = await prisma.timetableSlot.findMany({
+      where: {
+        dayOfWeek: currentDayOfWeek,
+        sectionSubject: {
+          sectionId: studentProfile.sectionId
+        }
+      },
+      include: {
+        sectionSubject: {
+          include: {
+            subject: true,
+            facultyProfile: {
+              include: {
+                user: {
+                  select: { name: true }
+                }
+              }
+            }
+          }
+        }
+      },
+      // Order classes chronologically by start time
+      orderBy: {
+        startTime: 'asc'
+      }
+    });
+
+    // 4. Format the response
+    const schedule = todaySlots.map((slot) => ({
+      slotId: slot.id,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      subjectName: slot.sectionSubject.subject.name,
+      subjectCode: slot.sectionSubject.subject.code,
+      facultyName: slot.sectionSubject.facultyProfile?.user?.name || 'Unassigned'
+    }));
+
+    res.json(schedule);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ── Raise Correction ──────────────────────────────────────
 // Body: { attendanceRecordId, reason }
 
