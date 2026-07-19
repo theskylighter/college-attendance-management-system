@@ -2,7 +2,7 @@ import api from "../../../lib/axios";
 
 // register
 export async function register({ fullName, email, role, password, profileData }) {
-    const response = await api.post("/api/auth/register", {
+    const response = await api.post("/auth/register", {
       name: fullName,
       email,
       password,
@@ -15,13 +15,13 @@ export async function register({ fullName, email, role, password, profileData })
 
 // login
 export async function login({ email, password }) {
-  const response = await api.post("/api/auth/login", { email, password });
+  const response = await api.post("/auth/login", { email, password });
   return response.data;
 }
 // getme
 export async function getme() {
   try {
-    const response = await api.get("/api/auth/me");
+    const response = await api.get("/auth/me");
     if (response) return response.data;
   } catch (err) {
     console.log(err);
@@ -30,7 +30,7 @@ export async function getme() {
 // logout
 export async function logout({ email, password }) {
  
-    const response = await api.post("/api/auth/logout");
+    const response = await api.post("/auth/logout");
     return response.data;
     
   
