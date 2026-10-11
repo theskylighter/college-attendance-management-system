@@ -5,6 +5,9 @@ import { useAuth } from "../features/auth/hooks/useAuth";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Unauthorized from "../features/auth/pages/Unauthorized";
 import ProtectedRoute from "./ProtectedRoute";
+import StudentDashboard from "../features/student/Dashboard";
+import FacultyDashboard from "../features/faculty/FacultyDashboard";
+import AdminDashboard from "../features/admin/AdminDashboard";
 const AppRoutes = () => {
   const { loading } = useAuth();
   if (loading) {
@@ -19,7 +22,7 @@ const AppRoutes = () => {
         path="/student/dashboard"
         element={
           <ProtectedRoute allowedRoles={["STUDENT"]}>
-            <div>Student Dashboard (placeholder)</div>
+            <StudentDashboard/>
           </ProtectedRoute>
         }
       />
@@ -28,7 +31,7 @@ const AppRoutes = () => {
         path="/faculty/schedule"
         element={
           <ProtectedRoute allowedRoles={["FACULTY"]}>
-            <div>Faculty Schedule (placeholder)</div>
+            <FacultyDashboard />
           </ProtectedRoute>
         }
       />
@@ -37,7 +40,7 @@ const AppRoutes = () => {
         path="/admin/dashboard"
         element={
           <ProtectedRoute allowedRoles={["ADMIN"]}>
-            <div>Admin Dashboard (placeholder)</div>
+            <AdminDashboard />
           </ProtectedRoute>
         }
       />
