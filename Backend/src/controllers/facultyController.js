@@ -141,37 +141,78 @@ exports.bulkMarkAttendance = async (req, res, next) => {
       }
     }
 
-    // Run everything in a single transaction
-    // If any insert fails, ALL are rolled back
+    const studentIds = records.map(record => parseInt(record.studentId))
+    if (new Set(studentIds).size !== studentIds.length) {
+      return res.status(400).json({ error: 'Each student may appear only once.' })
+    }
+
+    const enrolledStudents = await prisma.studentProfile.findMany({
+      where: {
+        sectionId: session.sectionSubject.sectionId,
+        userId: { in: studentIds }
+      },
+      select: { userId: true }
+    })
+
+    if (enrolledStudents.length !== studentIds.length) {
+      const enrolledIds = new Set(enrolledStudents.map(student => student.userId))
+      const invalidStudentIds = studentIds.filter(studentId => !enrolledIds.has(studentId))
+      return res.status(400).json({
+        error: `Students are not enrolled in this section: ${invalidStudentIds.join(', ')}`
+      })
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      // Mark session as HELD
+      const currentSession = await tx.lectureSession.findUnique({
+        where: { id: parseInt(lectureSessionId) },
+        select: { status: true }
+      })
+
       await tx.lectureSession.update({
         where: { id: parseInt(lectureSessionId) },
         data: { status: 'HELD', markedById: req.user.userId }
       })
 
-      // Upsert attendance records
-      // upsert = insert if not exists, update if exists
-      // This allows faculty to re-mark a session without duplicates
-      const attendanceRecords = await Promise.all(
-        records.map(record =>
-          tx.attendanceRecord.upsert({
-            where: {
-              lectureSessionId_studentId: {
-                lectureSessionId: parseInt(lectureSessionId),
-                studentId: parseInt(record.studentId)
-              }
-            },
-            update: { status: record.status, markedAt: new Date() },
-            create: {
+      if (currentSession.status !== 'HELD') {
+        await markSessionHeld(tx, session.sectionSubjectId)
+      }
+
+      const attendanceRecords = []
+      for (const record of records) {
+        const studentId = parseInt(record.studentId)
+        const existing = await tx.attendanceRecord.findUnique({
+          where: {
+            lectureSessionId_studentId: {
               lectureSessionId: parseInt(lectureSessionId),
-              studentId: parseInt(record.studentId),
-              status: record.status,
-              markedAt: new Date()
+              studentId
             }
-          })
-        )
-      )
+          }
+        })
+
+        const saved = await tx.attendanceRecord.upsert({
+          where: {
+            lectureSessionId_studentId: {
+              lectureSessionId: parseInt(lectureSessionId),
+              studentId
+            }
+          },
+          update: { status: record.status, markedAt: new Date() },
+          create: {
+            lectureSessionId: parseInt(lectureSessionId),
+            studentId,
+            status: record.status,
+            markedAt: new Date()
+          }
+        })
+
+        await applyAttendanceDelta(tx, {
+          studentId,
+          sectionSubjectId: session.sectionSubjectId,
+          previousStatus: existing?.status || null,
+          nextStatus: record.status
+        })
+        attendanceRecords.push(saved)
+      }
 
       return attendanceRecords
     })
