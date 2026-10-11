@@ -601,14 +601,37 @@ exports.generateLectureSessions = async (req, res, next) => {
       return res.status(400).json({ error: 'No sessions fall within this date range for given slots.' })
     }
 
-    // Create all sessions in one transaction
-    const result = await prisma.$transaction(
-      sessionsToCreate.map(session => prisma.lectureSession.create({ data: session }))
-    )
+    const result = await prisma.$transaction(async (tx) => {
+      const created = []
+      const existing = []
+
+      for (const session of sessionsToCreate) {
+        const duplicate = await tx.lectureSession.findFirst({
+          where: {
+            sectionSubjectId: session.sectionSubjectId,
+            date: session.date,
+            startTime: session.startTime,
+            endTime: session.endTime
+          }
+        })
+
+        if (duplicate) {
+          existing.push(duplicate)
+          continue
+        }
+
+        created.push(await tx.lectureSession.create({ data: session }))
+      }
+
+      return { created, existing }
+    })
 
     res.status(201).json({
-      message: `${result.length} lecture sessions generated.`,
-      sessions: result
+      message: `${result.created.length} lecture sessions generated.`,
+      created: result.created,
+      existing: result.existing,
+      createdCount: result.created.length,
+      existingCount: result.existing.length
     })
   } catch (error) { next(error) }
 }
