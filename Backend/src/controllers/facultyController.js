@@ -68,7 +68,6 @@ exports.getSessionStudents = async (req, res, next) => {
       return res.status(404).json({ error: 'Session not found.' })
     }
 
-    // Map students with their attendance status if already marked
     const students = session.sectionSubject.section.studentProfiles.map(profile => {
       const record = session.attendanceRecords.find(
         r => r.studentId === profile.userId
@@ -109,19 +108,15 @@ exports.bulkMarkAttendance = async (req, res, next) => {
       return res.status(400).json({ error: 'lectureSessionId and records array are required.' })
     }
 
-    // Verify session exists
     const session = await prisma.lectureSession.findUnique({
       where: { id: parseInt(lectureSessionId) },
-      include: {
-        sectionSubject: true
-      }
+      include: { sectionSubject: true }
     })
 
     if (!session) {
       return res.status(404).json({ error: 'Lecture session not found.' })
     }
 
-    // Verify this faculty owns this session
     const facultyProfile = await prisma.facultyProfile.findUnique({
       where: { userId: req.user.userId }
     })
@@ -130,7 +125,6 @@ exports.bulkMarkAttendance = async (req, res, next) => {
       return res.status(403).json({ error: 'You are not assigned to this session.' })
     }
 
-    // Validate all statuses
     const validStatuses = ['PRESENT', 'ABSENT', 'LATE']
     for (const record of records) {
       if (!record.studentId || !record.status) {
