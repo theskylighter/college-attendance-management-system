@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {useAuth} from '../hooks/useAuth' 
+import { useAuth } from "../hooks/useAuth";
 import {
   Library,
   Mail,
@@ -21,7 +21,7 @@ const roles = [
 ];
 
 const Login = () => {
-  const { handleLogin, loading }  = useAuth();
+  const { handleLogin, loading } = useAuth();
   const navigate = useNavigate();
   const [role, setRole] = useState("STUDENT");
   const [email, setEmail] = useState("");
@@ -30,21 +30,30 @@ const Login = () => {
   const [error, setError] = useState("");
 
   const passwordType = showPassword ? "text" : "password";
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const canSubmit = email.trim() && password.trim();
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError("");
+
+    if (!canSubmit) {
+      setError("Complete all fields and accept the terms to continue.");
+      return;
+    }
+    
     try {
-      const role = await handleLogin({email, password});
-      
+      const role = await handleLogin({ email, password });
+
       // 2. Redirect based on role
-      if (role === 'STUDENT') navigate('/student/dashboard');
-      else if (role === 'FACULTY') navigate('/faculty/schedule');
-      else navigate('/admin/dashboard');
-      
+      if (role === "STUDENT") navigate("/student/dashboard");
+      else if (role === "FACULTY") navigate("/faculty/schedule");
+      else navigate("/admin/dashboard");
     } catch (err) {
       // 3. The error successfully bubbles up from the API -> Context -> Here
-      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+      setError(
+        err.response?.data?.error ||
+          "Login failed. Please check your credentials.",
+      );
     }
   };
 
@@ -52,7 +61,7 @@ const Login = () => {
     <div className="flex min-h-screen w-full flex-col bg-[#f7f7fb] text-slate-900">
       {/* Background Effects */}
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(13,42,78,0.09),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(96,165,250,0.08),transparent_36%)]" />
-      
+
       {/* Header */}
       <header className="relative z-10 flex w-full items-center justify-between border-b border-slate-200/80 bg-white/80 px-6 py-4 backdrop-blur-md">
         <button
@@ -86,7 +95,6 @@ const Login = () => {
       {/* Main Content */}
       <main className="relative z-10 flex w-full flex-1 flex-col items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
         <section className="grid w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] md:grid-cols-[0.92fr_1.08fr]">
-          
           {/* Left Side: Hero Image & Branding */}
           <aside className="relative hidden min-h-full overflow-hidden bg-[#0b2a55] md:block">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.18),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.12),transparent_38%)]" />
@@ -108,7 +116,8 @@ const Login = () => {
                 Access your personalized academic dashboard.
               </h1>
               <p className="mt-4 max-w-md text-base leading-7 text-blue-50/85">
-                Review attendance, manage lecture sessions, and stay connected with the network of excellence.
+                Review attendance, manage lecture sessions, and stay connected
+                with the network of excellence.
               </p>
 
               <div className="mt-8 flex items-center gap-4 text-sm text-blue-100/80">
@@ -132,7 +141,6 @@ const Login = () => {
             </div>
 
             <form className="space-y-6" onSubmit={handleSubmit}>
-              
               {/* Role Selection */}
               <div>
                 <label className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-wide text-slate-700">
@@ -192,7 +200,7 @@ const Login = () => {
                     Forgot Password?
                   </a>
                 </div>
-                
+
                 <div className="relative">
                   <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
                     <Lock className="h-5 w-5 shrink-0" />
@@ -209,7 +217,9 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword((current) => !current)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                     className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 transition hover:text-slate-800"
                   >
                     {showPassword ? (
@@ -263,13 +273,22 @@ const Login = () => {
           AcademiaLink
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2 font-semibold">
-          <a className="transition hover:text-[#0b2a55] hover:underline" href="#">
+          <a
+            className="transition hover:text-[#0b2a55] hover:underline"
+            href="#"
+          >
             Privacy Policy
           </a>
-          <a className="transition hover:text-[#0b2a55] hover:underline" href="#">
+          <a
+            className="transition hover:text-[#0b2a55] hover:underline"
+            href="#"
+          >
             Terms of Service
           </a>
-          <a className="transition hover:text-[#0b2a55] hover:underline" href="#">
+          <a
+            className="transition hover:text-[#0b2a55] hover:underline"
+            href="#"
+          >
             Support
           </a>
         </div>

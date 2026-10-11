@@ -1,7 +1,8 @@
-import { createContext, useState } from "react";
-import { useEffect } from "react";
+/* eslint-disable react-refresh/only-export-components */
+
+import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login, register, getme, logout } from "./services/auth.api";
+import { getme, login, logout, register } from "./services/auth.api";
 
 export const AuthContext = createContext();
 
@@ -10,60 +11,56 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // handleLogin controller
- const handleLogin = async ({email, password}) => {
-    
-   setLoading(true)
+  const handleLogin = async ({ email, password }) => {
+    setLoading(true);
     const data = await login({ email, password });
     setUser(data.user);
-    setLoading(false)
-    
+    setLoading(false);
+
     return data.user.role;
   };
 
-  // handleRegister controller
-  const handleRegister = async({ fullName, email, password, role, profileData }) => {
+  const handleRegister = async ({ fullName, email, password, role, profileData }) => {
     setLoading(true);
-    // call the actual api from auth.api.js
-    const data = await register({ fullName, email, password, role, profileData });
+    await register({ fullName, email, password, role, profileData });
     setLoading(false);
   };
 
-  // handleLogout controller
-  const handleLogout = async() => {
+  const handleLogout = async () => {
     setLoading(true);
-    // call the actual api from auth.api.js
-    const data = await logout();
-    setLoading(false);
+    try {
+      await logout();
+    } finally {
+      setUser(null);
+      setLoading(false);
+      navigate("/login");
+    }
   };
 
-  // fetch user details to check if already logged in
   useEffect(() => {
     const getAndSetUser = async () => {
       try {
         const data = await getme();
-        if(data.user) {
-          console.log("setting user as:",data.user)
-          setUser(data.user);
-          if(data.user.role ==='STUDENT'){
-            navigate("/student/dashboard")
-          }
-          else if(data.user.role ==='FACULTY'){
-            navigate("/faculty/schedule")
-          }
-          else
-            navigate("/admin/dashboard")
+        if (!data?.user) {
+          return;
         }
-      } catch (err) {
-        console.log(err);
+
+        setUser(data.user);
+
+        if (data.user.role === "STUDENT") {
+          navigate("/student/dashboard");
+        } else if (data.user.role === "FACULTY") {
+          navigate("/faculty/schedule");
+        } else {
+          navigate("/admin/dashboard");
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    getAndSetUser();
-  
-  }, []);
+    void getAndSetUser();
+  }, [navigate]);
 
   return (
     <AuthContext.Provider
