@@ -641,6 +641,108 @@ const PDFDocument = require('pdfkit')
 // ── Defaulters List ───────────────────────────────────────
 // Query: ?sectionId=1&subjectId=2&threshold=75
 
+// ── Escalated Corrections ─────────────────────────────────────
+
+exports.getEscalatedCorrections = async (req, res, next) => {
+  try {
+    const corrections = await prisma.correctionRequest.findMany({
+      where: {
+        adminEscalated: true,
+        adminDecision: 'PENDING'
+      },
+      include: {
+        events: { orderBy: { createdAt: 'asc' } },
+        student: { select: { id: true, name: true, email: true } },
+        attendanceRecord: {
+          include: {
+            lectureSession: {
+              include: {
+                sectionSubject: {
+                  include: { subject: true, section: true }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: { escalatedAt: 'asc' }
+    })
+
+    res.json(corrections)
+  } catch (error) { next(error) }
+}
+
+exports.decideEscalation = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { decision } = req.body
+
+    if (!['APPROVED', 'REJECTED'].includes(decision)) {
+      return res.status(400).json({ error: 'Decision must be APPROVED or REJECTED.' })
+    }
+
+    const correction = await prisma.correctionRequest.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        attendanceRecord: {
+          include: {
+            lectureSession: { include: { sectionSubject: true } }
+          }
+        }
+      }
+    })
+
+    if (!correction) {
+      return res.status(404).json({ error: 'Correction request not found.' })
+    }
+
+    if (!correction.adminEscalated) {
+      return res.status(409).json({ error: 'This correction was not escalated to admin.' })
+    }
+
+    if (correction.adminDecision !== 'PENDING') {
+      return res.status(409).json({ error: 'This escalation has already been decided.' })
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.correctionRequest.update({
+        where: { id: parseInt(id) },
+        data: {
+          adminDecision: decision,
+          adminDecisionAt: new Date()
+        }
+      })
+
+      if (decision === 'APPROVED') {
+        await tx.attendanceRecord.update({
+          where: { id: correction.attendanceRecordId },
+          data: { status: 'PRESENT' }
+        })
+        await applyAttendanceDelta(tx, {
+          studentId: correction.attendanceRecord.studentId,
+          sectionSubjectId: correction.attendanceRecord.lectureSession.sectionSubjectId,
+          previousStatus: correction.attendanceRecord.status,
+          nextStatus: 'PRESENT'
+        })
+      }
+
+      await createCorrectionEvent(tx, {
+        correctionRequestId: correction.id,
+        attendanceRecordId: correction.attendanceRecordId,
+        actorId: req.user.userId,
+        action: decision === 'APPROVED' ? 'ADMIN_APPROVED' : 'ADMIN_REJECTED',
+        previousStatus: correction.attendanceRecord.status,
+        newStatus: decision === 'APPROVED' ? 'PRESENT' : null,
+        reason: req.body.reason
+      })
+
+      return updated
+    })
+
+    res.json({ message: `Escalation ${decision.toLowerCase()}.`, correction: result })
+  } catch (error) { next(error) }
+}
+
 exports.getDefaulters = async (req, res, next) => {
   try {
     const { sectionId, subjectId, threshold = 75 } = req.query

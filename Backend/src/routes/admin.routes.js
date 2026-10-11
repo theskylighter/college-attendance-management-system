@@ -7,6 +7,12 @@ const adminController = require('../controllers/adminController')
 router.use(authenticate)
 router.use(authorizeRoles('ADMIN'))
 
+// Rooms
+router.get('/rooms', adminController.getRooms)
+router.post('/rooms', adminController.createRoom)
+router.put('/rooms/:id', adminController.updateRoom)
+router.delete('/rooms/:id', adminController.deleteRoom)
+
 // Departments
 router.get('/departments', adminController.getDepartments)
 router.post('/departments', adminController.createDepartment)
@@ -43,6 +49,10 @@ router.get('/timetable/slots', adminController.getTimetableSlots)
 router.post('/timetable/slots', adminController.createTimetableSlot)
 router.delete('/timetable/slots/:id', adminController.deleteTimetableSlot)
 router.post('/timetable/generate-sessions', adminController.generateLectureSessions)
+
+// Correction escalations
+router.get('/corrections/escalated', adminController.getEscalatedCorrections)
+router.put('/corrections/:id/decision', adminController.decideEscalation)
 
 // Reports
 router.get('/reports/defaulters', adminController.getDefaulters)

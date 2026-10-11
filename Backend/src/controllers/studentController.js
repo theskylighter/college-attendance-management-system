@@ -1,4 +1,7 @@
 const prisma = require('../lib/prisma')
+const { parsePagination, withPagination } = require('../lib/pagination')
+const { formatSummary } = require('../lib/attendanceSummary')
+const { createCorrectionEvent } = require('../lib/correctionAudit')
 
 // ── Attendance Summary ────────────────────────────────────
 // Returns attendance percentage per subject for logged-in student
@@ -272,13 +275,26 @@ exports.raiseCorrection = async (req, res, next) => {
       return res.status(409).json({ error: 'A correction request is already pending for this record.' })
     }
 
-    const correction = await prisma.correctionRequest.create({
-      data: {
-        attendanceRecordId: parseInt(attendanceRecordId),
-        studentId: req.user.userId,
-        reason,
-        requestedAt: new Date()
-      }
+    const correction = await prisma.$transaction(async (tx) => {
+      const created = await tx.correctionRequest.create({
+        data: {
+          attendanceRecordId: parseInt(attendanceRecordId),
+          studentId: req.user.userId,
+          reason,
+          requestedAt: new Date()
+        }
+      })
+
+      await createCorrectionEvent(tx, {
+        correctionRequestId: created.id,
+        attendanceRecordId: record.id,
+        actorId: req.user.userId,
+        action: 'SUBMITTED',
+        previousStatus: record.status,
+        reason
+      })
+
+      return created
     })
 
     res.status(201).json({
@@ -288,28 +304,97 @@ exports.raiseCorrection = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+// ── Escalate Correction ─────────────────────────────────────
+// Body: { reason }
+
+exports.escalateCorrection = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ error: 'A reason for escalation is required.' })
+    }
+
+    const correction = await prisma.correctionRequest.findUnique({
+      where: { id: parseInt(id) }
+    })
+
+    if (!correction) {
+      return res.status(404).json({ error: 'Correction request not found.' })
+    }
+
+    if (correction.studentId !== req.user.userId) {
+      return res.status(403).json({ error: 'This request does not belong to you.' })
+    }
+
+    if (correction.adminEscalated) {
+      return res.status(409).json({ error: 'This correction has already been escalated to admin.' })
+    }
+
+    if (correction.facultyDecision === 'APPROVED') {
+      return res.status(400).json({ error: 'This request was already approved by faculty and cannot be escalated.' })
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.correctionRequest.update({
+        where: { id: parseInt(id) },
+        data: {
+          adminEscalated: true,
+          escalatedAt: new Date(),
+          escalationReason: reason.trim(),
+          adminDecision: 'PENDING',
+          adminDecisionAt: null
+        }
+      })
+
+      await createCorrectionEvent(tx, {
+        correctionRequestId: correction.id,
+        attendanceRecordId: correction.attendanceRecordId,
+        actorId: req.user.userId,
+        action: 'ESCALATED',
+        reason: reason.trim()
+      })
+
+      return result
+    })
+
+    res.json({
+      message: 'Correction request escalated to admin.',
+      correction: updated
+    })
+  } catch (error) { next(error) }
+}
+
 // ── My Corrections ────────────────────────────────────────
 
 exports.getMyCorrections = async (req, res, next) => {
   try {
-    const corrections = await prisma.correctionRequest.findMany({
-      where: { studentId: req.user.userId },
-      include: {
-        attendanceRecord: {
-          include: {
-            lectureSession: {
-              include: {
-                sectionSubject: {
-                  include: { subject: true, section: true }
+    const { page, limit, skip } = parsePagination(req.query, 10)
+    const [corrections, total] = await Promise.all([
+      prisma.correctionRequest.findMany({
+        where: { studentId: req.user.userId },
+        include: {
+          events: { orderBy: { createdAt: 'asc' } },
+          attendanceRecord: {
+            include: {
+              lectureSession: {
+                include: {
+                  sectionSubject: {
+                    include: { subject: true, section: true }
+                  }
                 }
               }
             }
           }
-        }
-      },
-      orderBy: { requestedAt: 'desc' }
-    })
+        },
+        orderBy: { requestedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.correctionRequest.count({ where: { studentId: req.user.userId } }),
+    ])
 
-    res.json(corrections)
+    res.json(withPagination(corrections, total, page, limit))
   } catch (error) { next(error) }
 }

@@ -1,4 +1,6 @@
 const prisma = require('../lib/prisma')
+const { applyAttendanceDelta, markSessionHeld } = require('../lib/attendanceSummary')
+const { createCorrectionEvent } = require('../lib/correctionAudit')
 
 // ── Schedule ─────────────────────────────────────────────
 // Returns today's lecture sessions for the logged-in faculty
@@ -199,6 +201,7 @@ exports.getPendingCorrections = async (req, res, next) => {
         }
       },
       include: {
+        events: { orderBy: { createdAt: 'asc' } },
         student: { select: { name: true, email: true } },
         attendanceRecord: {
           include: {
@@ -223,7 +226,7 @@ exports.getPendingCorrections = async (req, res, next) => {
 exports.decideCorrection = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { decision } = req.body
+    const { decision, reason } = req.body
 
     if (!['APPROVED', 'REJECTED'].includes(decision)) {
       return res.status(400).json({ error: 'Decision must be APPROVED or REJECTED.' })
@@ -231,18 +234,30 @@ exports.decideCorrection = async (req, res, next) => {
 
     const correction = await prisma.correctionRequest.findUnique({
       where: { id: parseInt(id) },
-      include: { attendanceRecord: true }
+      include: {
+        attendanceRecord: {
+          include: {
+            lectureSession: { include: { sectionSubject: true } }
+          }
+        }
+      }
     })
 
     if (!correction) {
       return res.status(404).json({ error: 'Correction request not found.' })
     }
 
+    const facultyProfile = await prisma.facultyProfile.findUnique({
+      where: { userId: req.user.userId }
+    })
+    if (!facultyProfile || correction.attendanceRecord.lectureSession.sectionSubject.facultyProfileId !== facultyProfile.id) {
+      return res.status(403).json({ error: 'You are not assigned to this correction.' })
+    }
+
     if (correction.facultyDecision !== 'PENDING') {
       return res.status(409).json({ error: 'This correction has already been decided.' })
     }
 
-    // Run as transaction: update correction + update attendance record if approved
     const result = await prisma.$transaction(async (tx) => {
       const updated = await tx.correctionRequest.update({
         where: { id: parseInt(id) },
@@ -252,13 +267,29 @@ exports.decideCorrection = async (req, res, next) => {
         }
       })
 
-      // If approved, flip the attendance record to PRESENT
+      const nextStatus = decision === 'APPROVED' ? 'PRESENT' : correction.attendanceRecord.status
       if (decision === 'APPROVED') {
         await tx.attendanceRecord.update({
           where: { id: correction.attendanceRecordId },
-          data: { status: 'PRESENT' }
+          data: { status: nextStatus }
+        })
+        await applyAttendanceDelta(tx, {
+          studentId: correction.attendanceRecord.studentId,
+          sectionSubjectId: correction.attendanceRecord.lectureSession.sectionSubjectId,
+          previousStatus: correction.attendanceRecord.status,
+          nextStatus
         })
       }
+
+      await createCorrectionEvent(tx, {
+        correctionRequestId: correction.id,
+        attendanceRecordId: correction.attendanceRecordId,
+        actorId: req.user.userId,
+        action: decision === 'APPROVED' ? 'FACULTY_APPROVED' : 'FACULTY_REJECTED',
+        previousStatus: correction.attendanceRecord.status,
+        newStatus: decision === 'APPROVED' ? nextStatus : null,
+        reason
+      })
 
       return updated
     })

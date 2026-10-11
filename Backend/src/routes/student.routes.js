@@ -16,6 +16,7 @@ router.get('/schedule',studentController.getSchedule)
 
 // Corrections
 router.post('/corrections', studentController.raiseCorrection)
+router.post('/corrections/:id/escalate', studentController.escalateCorrection)
 router.get('/corrections', studentController.getMyCorrections)
 
 module.exports = router
