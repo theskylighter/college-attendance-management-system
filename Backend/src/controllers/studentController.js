@@ -114,31 +114,35 @@ exports.getAttendanceBySubject = async (req, res, next) => {
 
 exports.getCourses = async (req, res, next) => {
   try {
-    // 1. Get the student's profile to find their sectionId
+    const { page, limit, skip } = parsePagination(req.query, 10)
+
     const studentProfile = await prisma.studentProfile.findUnique({
       where: { userId: req.user.userId }
-    });
+    })
 
     if (!studentProfile) {
-      return res.status(404).json({ error: 'Student profile not found.' });
+      return res.status(404).json({ error: 'Student profile not found.' })
     }
 
-    // 2. Fetch all section subjects for this section, including subject and faculty details
-    const sectionSubjects = await prisma.sectionSubject.findMany({
-      where: { sectionId: studentProfile.sectionId },
-      include: {
-        subject: true,
-        facultyProfile: {
-          include: {
-            user: {
-              select: { name: true, email: true }
+    const [sectionSubjects, total] = await Promise.all([
+      prisma.sectionSubject.findMany({
+        where: { sectionId: studentProfile.sectionId },
+        include: {
+          subject: true,
+          facultyProfile: {
+            include: {
+              user: {
+                select: { name: true, email: true }
+              }
             }
           }
-        }
-      }
-    });
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.sectionSubject.count({ where: { sectionId: studentProfile.sectionId } }),
+    ])
 
-    // 3. Format the response data
     const courses = sectionSubjects.map((ss) => ({
       sectionSubjectId: ss.id,
       subjectId: ss.subject.id,
@@ -147,13 +151,13 @@ exports.getCourses = async (req, res, next) => {
       facultyName: ss.facultyProfile?.user?.name || 'Unassigned',
       facultyEmail: ss.facultyProfile?.user?.email || null,
       totalPlannedLectures: ss.subject.totalPlannedLectures
-    }));
+    }))
 
-    res.json(courses);
+    res.json(withPagination(courses, total, page, limit))
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 // ── Today's Schedule ─────────────────────────────────────────
 // Returns the timetable slots for the logged-in student for the current day
 
