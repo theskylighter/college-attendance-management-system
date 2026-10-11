@@ -34,6 +34,15 @@ enum DecisionStatus {
   REJECTED
 }
 
+enum CorrectionAction {
+  SUBMITTED
+  FACULTY_APPROVED
+  FACULTY_REJECTED
+  ESCALATED
+  ADMIN_APPROVED
+  ADMIN_REJECTED
+}
+
 // ── Models ─────────────────────────────────────────────
 
 model User {
@@ -50,6 +59,11 @@ model User {
   markedSessions    LectureSession[]
   attendanceRecords AttendanceRecord[]
   correctionRequests CorrectionRequest[]
+    correctionEvents  CorrectionEvent[]
+    attendanceSummaries AttendanceSummary[]
+
+  @@index([role])
+  @@index([email])
 }
 
 model Department {
@@ -74,6 +88,9 @@ model Section {
   department      Department       @relation(fields: [departmentId], references: [id])
   studentProfiles StudentProfile[]
   sectionSubjects SectionSubject[]
+
+  @@index([departmentId])
+  @@index([batchYear])
 }
 
 model StudentProfile {
@@ -84,6 +101,9 @@ model StudentProfile {
 
   user    User    @relation(fields: [userId], references: [id])
   section Section @relation(fields: [sectionId], references: [id])
+
+  @@index([sectionId])
+  @@index([rollNumber])
 }
 
 model FacultyProfile {
@@ -95,6 +115,9 @@ model FacultyProfile {
   user           User             @relation(fields: [userId], references: [id])
   department     Department       @relation(fields: [departmentId], references: [id])
   sectionSubjects SectionSubject[]
+
+  @@index([departmentId])
+  @@index([employeeId])
 }
 
 model Subject {
@@ -121,23 +144,45 @@ model SectionSubject {
 
   lectureSessions LectureSession[]
   timetableSlots  TimetableSlot[]
+  attendanceSummaries AttendanceSummary[]
 
   @@unique([sectionId, subjectId])
+  @@index([sectionId])
+  @@index([subjectId])
+  @@index([facultyProfileId])
+}
+
+model Room {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  building  String?
+  capacity  Int?
+  createdAt DateTime @default(now())
+
+  timetableSlots  TimetableSlot[]
+  lectureSessions LectureSession[]
 }
 
 model LectureSession {
   id               Int           @id @default(autoincrement())
-  sectionSubjectId Int
-  date      DateTime
-  startTime String   // store as "HH:MM" string
-  endTime   String
+  sectionSubjectId  Int
+  roomId           Int?
+  date             DateTime
+  startTime        String   // store as "HH:MM" string
+  endTime          String
   status           SessionStatus @default(SCHEDULED)
   markedById       Int?
   createdAt        DateTime      @default(now())
 
   sectionSubject    SectionSubject     @relation(fields: [sectionSubjectId], references: [id])
+  room              Room?              @relation(fields: [roomId], references: [id])
   markedBy          User?              @relation(fields: [markedById], references: [id])
   attendanceRecords AttendanceRecord[]
+
+  @@index([sectionSubjectId])
+  @@index([date])
+  @@index([status])
+  @@index([roomId])
 }
 
 model AttendanceRecord {
@@ -151,33 +196,89 @@ model AttendanceRecord {
   lectureSession     LectureSession      @relation(fields: [lectureSessionId], references: [id])
   student            User                @relation(fields: [studentId], references: [id])
   correctionRequests CorrectionRequest[]
+  correctionEvents   CorrectionEvent[]
 
   @@unique([lectureSessionId, studentId])
+  @@index([lectureSessionId])
+  @@index([studentId])
+  @@index([status])
+}
+
+model CorrectionEvent {
+  id                 Int              @id @default(autoincrement())
+  correctionRequestId Int
+  attendanceRecordId Int
+  actorId            Int
+  action             CorrectionAction
+  previousStatus     AttendanceStatus?
+  newStatus          AttendanceStatus?
+  reason             String?
+  createdAt          DateTime         @default(now())
+
+  correctionRequest CorrectionRequest @relation(fields: [correctionRequestId], references: [id])
+  attendanceRecord AttendanceRecord  @relation(fields: [attendanceRecordId], references: [id])
+  actor            User              @relation(fields: [actorId], references: [id])
+
+  @@index([correctionRequestId])
+  @@index([attendanceRecordId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+model AttendanceSummary {
+  id                   Int            @id @default(autoincrement())
+  studentId            Int
+  sectionSubjectId     Int
+  heldSessionCount     Int            @default(0)
+  attendedSessionCount Int            @default(0)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  student              User           @relation(fields: [studentId], references: [id])
+  sectionSubject       SectionSubject @relation(fields: [sectionSubjectId], references: [id])
+
+  @@unique([studentId, sectionSubjectId])
+  @@index([studentId])
+  @@index([sectionSubjectId])
 }
 
 model CorrectionRequest {
   id                 Int            @id @default(autoincrement())
   attendanceRecordId Int
   studentId          Int
-  reason             String        
+  reason             String
   requestedAt        DateTime       @default(now())
   facultyDecision    DecisionStatus @default(PENDING)
   facultyDecisionAt  DateTime?
   adminEscalated     Boolean        @default(false)
+  escalatedAt        DateTime?
+  escalationReason   String?
   adminDecision      DecisionStatus?
   adminDecisionAt    DateTime?
 
   attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id])
   student          User             @relation(fields: [studentId], references: [id])
+  events           CorrectionEvent[]
+
+  @@index([studentId])
+  @@index([facultyDecision])
+  @@index([adminEscalated])
+  @@index([adminDecision])
 }
 
 model TimetableSlot {
   id               Int      @id @default(autoincrement())
-  sectionSubjectId Int
+  sectionSubjectId  Int
+  roomId           Int?
   dayOfWeek        Int      // 0 = Sunday, 1 = Monday ... 6 = Saturday
   startTime        String
   endTime          String
   createdAt        DateTime @default(now())
 
-  sectionSubject   SectionSubject @relation(fields: [sectionSubjectId], references: [id])
+  sectionSubject    SectionSubject @relation(fields: [sectionSubjectId], references: [id])
+  room             Room?          @relation(fields: [roomId], references: [id])
+
+  @@index([sectionSubjectId])
+  @@index([dayOfWeek])
+  @@index([roomId])
 }
