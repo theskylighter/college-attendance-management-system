@@ -1,24 +1,23 @@
-const authController = require( "../controllers/authController")
+const authController = require('../controllers/authController')
 const express = require('express')
-const authRouter= express.Router()
+const { body } = require('express-validator')
 const { authenticate } = require('../middlewares/auth')
-const { body,validationResult } = require('express-validator');
+const { validateRequest } = require('../middlewares/validate')
+
+const authRouter = express.Router()
 
 const validateRegister = [
+  body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Enter a valid email'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be 6+ characters'),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next(); // Pass control to the next route handler if clean
-  }
-];
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('role').isIn(['STUDENT', 'FACULTY']).withMessage('Role must be STUDENT or FACULTY'),
+  validateRequest,
+]
 
 const validateLogin = [
   body('email').isEmail().withMessage('Enter a valid email'),
   body('password').notEmpty().withMessage('Password is required'),
+  validateRequest,
 ]
 
 authRouter.post('/register', validateRegister, authController.register)
