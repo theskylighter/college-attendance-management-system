@@ -21,42 +21,23 @@ exports.getAttendanceSummary = async (req, res, next) => {
     // Get all subjects for this student's section
     const sectionSubjects = await prisma.sectionSubject.findMany({
       where: { sectionId: studentProfile.sectionId },
-      include: { subject: true }
+      include: {
+        subject: true,
+        attendanceSummaries: {
+          where: { studentId: req.user.userId }
+        }
+      }
     })
 
-    // For each subject, count total held sessions and student's present count
-    const summary = await Promise.all(
-      sectionSubjects.map(async (ss) => {
-        const totalSessions = await prisma.lectureSession.count({
-          where: {
-            sectionSubjectId: ss.id,
-            status: 'HELD'
-          }
-        })
-
-        const presentCount = await prisma.attendanceRecord.count({
-          where: {
-            lectureSession: { sectionSubjectId: ss.id },
-            studentId: req.user.userId,
-            status: { in: ['PRESENT', 'LATE'] }
-          }
-        })
-
-        const percentage = totalSessions === 0
-          ? 0
-          : Math.round((presentCount / totalSessions) * 100)
-
-        return {
+    const summary = sectionSubjects.map((ss) => ({
           subjectId: ss.subject.id,
           subjectName: ss.subject.name,
           subjectCode: ss.subject.code,
-          totalSessions,
-          attended: presentCount,
-          percentage,
-          safe: percentage >= 75
-        }
-      })
-    )
+          ...formatSummary(ss.attendanceSummaries[0] || {
+            heldSessionCount: 0,
+            attendedSessionCount: 0
+          })
+        }))
 
     res.json(summary)
   } catch (error) { next(error) }

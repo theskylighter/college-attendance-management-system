@@ -772,28 +772,28 @@ exports.getDefaulters = async (req, res, next) => {
       include: { user: { select: { id: true, name: true, email: true } } }
     })
 
-    // For each student + subject combination, calculate attendance
+    const summaries = await prisma.attendanceSummary.findMany({
+      where: {
+        studentId: { in: students.map(student => student.userId) },
+        sectionSubjectId: { in: sectionSubjects.map(ss => ss.id) }
+      }
+    })
+    const summaryByKey = new Map(
+      summaries.map(summary => [`${summary.studentId}:${summary.sectionSubjectId}`, summary])
+    )
+
     const defaulters = []
 
     for (const student of students) {
       for (const ss of sectionSubjects) {
-        const totalSessions = await prisma.lectureSession.count({
-          where: { sectionSubjectId: ss.id, status: 'HELD' }
+        const summary = formatSummary(summaryByKey.get(`${student.userId}:${ss.id}`) || {
+          heldSessionCount: 0,
+          attendedSessionCount: 0
         })
 
-        if (totalSessions === 0) continue
+        if (summary.totalSessions === 0) continue
 
-        const presentCount = await prisma.attendanceRecord.count({
-          where: {
-            lectureSession: { sectionSubjectId: ss.id },
-            studentId: student.userId,
-            status: { in: ['PRESENT', 'LATE'] }
-          }
-        })
-
-        const percentage = Math.round((presentCount / totalSessions) * 100)
-
-        if (percentage < parseInt(threshold)) {
+        if (summary.percentage < parseInt(threshold)) {
           defaulters.push({
             studentId: student.userId,
             name: student.user.name,
@@ -802,9 +802,9 @@ exports.getDefaulters = async (req, res, next) => {
             subjectId: ss.subject.id,
             subjectName: ss.subject.name,
             subjectCode: ss.subject.code,
-            totalSessions,
-            attended: presentCount,
-            percentage
+            totalSessions: summary.totalSessions,
+            attended: summary.attended,
+            percentage: summary.percentage
           })
         }
       }
@@ -842,44 +842,33 @@ exports.getAttendanceSummary = async (req, res, next) => {
       include: { subject: true }
     })
 
-    const summary = await Promise.all(
-      students.map(async (student) => {
-        const subjects = await Promise.all(
-          sectionSubjects.map(async (ss) => {
-            const totalSessions = await prisma.lectureSession.count({
-              where: { sectionSubjectId: ss.id, status: 'HELD' }
-            })
-
-            const presentCount = await prisma.attendanceRecord.count({
-              where: {
-                lectureSession: { sectionSubjectId: ss.id },
-                studentId: student.userId,
-                status: { in: ['PRESENT', 'LATE'] }
-              }
-            })
-
-            const percentage = totalSessions === 0
-              ? 0
-              : Math.round((presentCount / totalSessions) * 100)
-
-            return {
-              subjectName: ss.subject.name,
-              subjectCode: ss.subject.code,
-              totalSessions,
-              attended: presentCount,
-              percentage
-            }
-          })
-        )
-
-        return {
-          studentId: student.userId,
-          name: student.user.name,
-          rollNumber: student.rollNumber,
-          subjects
-        }
-      })
+    const summaries = await prisma.attendanceSummary.findMany({
+      where: {
+        studentId: { in: students.map(student => student.userId) },
+        sectionSubjectId: { in: sectionSubjects.map(ss => ss.id) }
+      }
+    })
+    const summaryByKey = new Map(
+      summaries.map(summary => [`${summary.studentId}:${summary.sectionSubjectId}`, summary])
     )
+
+    const summary = students.map((student) => {
+      const subjects = sectionSubjects.map((ss) => ({
+        subjectName: ss.subject.name,
+        subjectCode: ss.subject.code,
+        ...formatSummary(summaryByKey.get(`${student.userId}:${ss.id}`) || {
+          heldSessionCount: 0,
+          attendedSessionCount: 0
+        })
+      }))
+
+      return {
+        studentId: student.userId,
+        name: student.user.name,
+        rollNumber: student.rollNumber,
+        subjects
+      }
+    })
 
     res.json(summary)
   } catch (error) { next(error) }
@@ -906,6 +895,16 @@ exports.exportExcel = async (req, res, next) => {
       where: { sectionId: parseInt(sectionId) },
       include: { user: { select: { id: true, name: true, email: true } } }
     })
+
+    const summaries = await prisma.attendanceSummary.findMany({
+      where: {
+        studentId: { in: students.map(student => student.userId) },
+        sectionSubjectId: { in: sectionSubjects.map(ss => ss.id) }
+      }
+    })
+    const summaryByKey = new Map(
+      summaries.map(summary => [`${summary.studentId}:${summary.sectionSubjectId}`, summary])
+    )
 
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('Attendance Report')
@@ -937,20 +936,13 @@ exports.exportExcel = async (req, res, next) => {
       let totalSessions = 0
 
       for (const ss of sectionSubjects) {
-        const total = await prisma.lectureSession.count({
-          where: { sectionSubjectId: ss.id, status: 'HELD' }
+        const current = formatSummary(summaryByKey.get(`${student.userId}:${ss.id}`) || {
+          heldSessionCount: 0,
+          attendedSessionCount: 0
         })
-        const present = await prisma.attendanceRecord.count({
-          where: {
-            lectureSession: { sectionSubjectId: ss.id },
-            studentId: student.userId,
-            status: { in: ['PRESENT', 'LATE'] }
-          }
-        })
-        const pct = total === 0 ? 0 : Math.round((present / total) * 100)
-        rowData[ss.subject.code] = `${pct}%`
-        totalPresent += present
-        totalSessions += total
+        rowData[ss.subject.code] = `${current.percentage}%`
+        totalPresent += current.attended
+        totalSessions += current.totalSessions
       }
 
       const overallPct = totalSessions === 0
@@ -1000,6 +992,16 @@ exports.exportPdf = async (req, res, next) => {
       include: { subject: true }
     })
 
+    const summaries = await prisma.attendanceSummary.findMany({
+      where: {
+        studentId: { in: students.map(student => student.userId) },
+        sectionSubjectId: { in: sectionSubjects.map(ss => ss.id) }
+      }
+    })
+    const summaryByKey = new Map(
+      summaries.map(summary => [`${summary.studentId}:${summary.sectionSubjectId}`, summary])
+    )
+
     const doc = new PDFDocument({ margin: 40 })
 
     res.setHeader('Content-Type', 'application/pdf')
@@ -1024,21 +1026,14 @@ exports.exportPdf = async (req, res, next) => {
       let totalSessions = 0
 
       for (const ss of sectionSubjects) {
-        const total = await prisma.lectureSession.count({
-          where: { sectionSubjectId: ss.id, status: 'HELD' }
+        const current = formatSummary(summaryByKey.get(`${student.userId}:${ss.id}`) || {
+          heldSessionCount: 0,
+          attendedSessionCount: 0
         })
-        const present = await prisma.attendanceRecord.count({
-          where: {
-            lectureSession: { sectionSubjectId: ss.id },
-            studentId: student.userId,
-            status: { in: ['PRESENT', 'LATE'] }
-          }
-        })
-        const pct = total === 0 ? 0 : Math.round((present / total) * 100)
-        const flag = pct < parseInt(threshold) ? ' ⚠ DEFAULTER' : ''
-        doc.text(`  ${ss.subject.code}: ${present}/${total} (${pct}%)${flag}`)
-        totalPresent += present
-        totalSessions += total
+        const flag = current.percentage < parseInt(threshold) ? ' ⚠ DEFAULTER' : ''
+        doc.text(`  ${ss.subject.code}: ${current.attended}/${current.totalSessions} (${current.percentage}%)${flag}`)
+        totalPresent += current.attended
+        totalSessions += current.totalSessions
       }
 
       const overallPct = totalSessions === 0
