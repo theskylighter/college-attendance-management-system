@@ -1,14 +1,90 @@
 const prisma = require('../lib/prisma')
 const bcrypt = require('bcryptjs')
+const { parsePagination, withPagination } = require('../lib/pagination')
+const { validateTimeRange } = require('../lib/time')
+const { findTimetableConflicts } = require('../lib/timetableConflicts')
+const { applyAttendanceDelta, formatSummary } = require('../lib/attendanceSummary')
+const { createCorrectionEvent } = require('../lib/correctionAudit')
+
+// ── Rooms ──────────────────────────────────────────────
+
+exports.getRooms = async (req, res, next) => {
+  try {
+    const rooms = await prisma.room.findMany({ orderBy: { name: 'asc' } })
+    res.json(rooms)
+  } catch (error) { next(error) }
+}
+
+exports.createRoom = async (req, res, next) => {
+  try {
+    const { name, building, capacity } = req.body
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Room name is required.' })
+    }
+
+    const room = await prisma.room.create({
+      data: {
+        name: name.trim(),
+        building: building?.trim() || null,
+        capacity: capacity === null || capacity === '' ? null : Number(capacity),
+      },
+    })
+    res.status(201).json(room)
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'Room name already exists.' })
+    }
+    next(error)
+  }
+}
+
+exports.updateRoom = async (req, res, next) => {
+  try {
+    const { name, building, capacity } = req.body
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Room name is required.' })
+    }
+
+    const room = await prisma.room.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        name: name.trim(),
+        building: building?.trim() || null,
+        capacity: capacity === null || capacity === '' ? null : Number(capacity),
+      },
+    })
+    res.json(room)
+  } catch (error) {
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Room not found.' })
+    if (error.code === 'P2002') return res.status(409).json({ error: 'Room name already exists.' })
+    next(error)
+  }
+}
+
+exports.deleteRoom = async (req, res, next) => {
+  try {
+    await prisma.room.delete({ where: { id: parseInt(req.params.id) } })
+    res.json({ message: 'Room deleted.' })
+  } catch (error) {
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Room not found.' })
+    next(error)
+  }
+}
 
 // ── Departments ─────────────────────────────────────────
 
 exports.getDepartments = async (req, res, next) => {
   try {
-    const departments = await prisma.department.findMany({
-      orderBy: { name: 'asc' }
-    })
-    res.json(departments)
+    const { page, limit, skip } = parsePagination(req.query, 10)
+    const [departments, total] = await Promise.all([
+      prisma.department.findMany({
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.department.count(),
+    ])
+    res.json(withPagination(departments, total, page, limit))
   } catch (error) { next(error) }
 }
 
@@ -64,11 +140,17 @@ exports.deleteDepartment = async (req, res, next) => {
 
 exports.getSections = async (req, res, next) => {
   try {
-    const sections = await prisma.section.findMany({
-      include: { department: true },
-      orderBy: { name: 'asc' }
-    })
-    res.json(sections)
+    const { page, limit, skip } = parsePagination(req.query, 10)
+    const [sections, total] = await Promise.all([
+      prisma.section.findMany({
+        include: { department: true },
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.section.count(),
+    ])
+    res.json(withPagination(sections, total, page, limit))
   } catch (error) { next(error) }
 }
 
@@ -123,11 +205,17 @@ exports.deleteSection = async (req, res, next) => {
 
 exports.getSubjects = async (req, res, next) => {
   try {
-    const subjects = await prisma.subject.findMany({
-      include: { department: true },
-      orderBy: { name: 'asc' }
-    })
-    res.json(subjects)
+    const { page, limit, skip } = parsePagination(req.query, 10)
+    const [subjects, total] = await Promise.all([
+      prisma.subject.findMany({
+        include: { department: true },
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.subject.count(),
+    ])
+    res.json(withPagination(subjects, total, page, limit))
   } catch (error) { next(error) }
 }
 
@@ -186,14 +274,19 @@ exports.deleteSubject = async (req, res, next) => {
 
 exports.getFaculty = async (req, res, next) => {
   try {
-    const faculty = await prisma.user.findMany({
-      where: { role: 'FACULTY' },
-      include: { facultyProfile: { include: { department: true } } },
-      orderBy: { name: 'asc' }
-    })
-    // strip passwordHash
+    const { page, limit, skip } = parsePagination(req.query, 10)
+    const [faculty, total] = await Promise.all([
+      prisma.user.findMany({
+        where: { role: 'FACULTY' },
+        include: { facultyProfile: { include: { department: true } } },
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where: { role: 'FACULTY' } }),
+    ])
     const safe = faculty.map(({ passwordHash, ...f }) => f)
-    res.json(safe)
+    res.json(withPagination(safe, total, page, limit))
   } catch (error) { next(error) }
 }
 
@@ -231,13 +324,19 @@ exports.createFaculty = async (req, res, next) => {
 
 exports.getStudents = async (req, res, next) => {
   try {
-    const students = await prisma.user.findMany({
-      where: { role: 'STUDENT' },
-      include: { studentProfile: { include: { section: true } } },
-      orderBy: { name: 'asc' }
-    })
+    const { page, limit, skip } = parsePagination(req.query, 10)
+    const [students, total] = await Promise.all([
+      prisma.user.findMany({
+        where: { role: 'STUDENT' },
+        include: { studentProfile: { include: { section: true } } },
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where: { role: 'STUDENT' } }),
+    ])
     const safe = students.map(({ passwordHash, ...s }) => s)
-    res.json(safe)
+    res.json(withPagination(safe, total, page, limit))
   } catch (error) { next(error) }
 }
 
@@ -275,14 +374,20 @@ exports.createStudent = async (req, res, next) => {
 
 exports.getSectionSubjects = async (req, res, next) => {
   try {
-    const sectionSubjects = await prisma.sectionSubject.findMany({
-      include: {
-        section: true,
-        subject: true,
-        facultyProfile: { include: { user: { select: { name: true, email: true } } } }
-      }
-    })
-    res.json(sectionSubjects)
+    const { page, limit, skip } = parsePagination(req.query, 10)
+    const [sectionSubjects, total] = await Promise.all([
+      prisma.sectionSubject.findMany({
+        include: {
+          section: true,
+          subject: true,
+          facultyProfile: { include: { user: { select: { name: true, email: true } } } }
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.sectionSubject.count(),
+    ])
+    res.json(withPagination(sectionSubjects, total, page, limit))
   } catch (error) { next(error) }
 }
 
@@ -324,41 +429,101 @@ exports.removeSectionSubject = async (req, res, next) => {
 
 exports.getTimetableSlots = async (req, res, next) => {
   try {
-    const slots = await prisma.timetableSlot.findMany({
-      include: {
-        sectionSubject: {
-          include: {
-            section: true,
-            subject: true,
-            facultyProfile: { include: { user: { select: { name: true } } } }
+    const { page, limit, skip } = parsePagination(req.query, 10)
+    const [slots, total] = await Promise.all([
+      prisma.timetableSlot.findMany({
+        include: {
+          sectionSubject: {
+            include: {
+              section: true,
+              subject: true,
+              facultyProfile: { include: { user: { select: { name: true } } } }
+            }
           }
-        }
-      },
-      orderBy: { dayOfWeek: 'asc' }
-    })
-    res.json(slots)
+        },
+        orderBy: { dayOfWeek: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.timetableSlot.count(),
+    ])
+    res.json(withPagination(slots, total, page, limit))
   } catch (error) { next(error) }
 }
 
 exports.createTimetableSlot = async (req, res, next) => {
   try {
-    const { sectionSubjectId, dayOfWeek, startTime, endTime } = req.body
+    const { sectionSubjectId, roomId, dayOfWeek, startTime, endTime } = req.body
     if (!sectionSubjectId || dayOfWeek === undefined || !startTime || !endTime) {
       return res.status(400).json({ error: 'All fields are required.' })
     }
-    // dayOfWeek: 0 = Sunday, 1 = Monday ... 6 = Saturday
-    if (dayOfWeek < 0 || dayOfWeek > 6) {
-      return res.status(400).json({ error: 'dayOfWeek must be 0–6.' })
+
+    const parsedSectionSubjectId = Number.parseInt(sectionSubjectId, 10)
+    const parsedDayOfWeek = Number.parseInt(dayOfWeek, 10)
+    const parsedRoomId = roomId === undefined || roomId === null || roomId === ''
+      ? null
+      : Number.parseInt(roomId, 10)
+
+    if (!Number.isInteger(parsedSectionSubjectId) || parsedSectionSubjectId < 1 ||
+      !Number.isInteger(parsedDayOfWeek) || parsedDayOfWeek < 0 || parsedDayOfWeek > 6 ||
+      (parsedRoomId !== null && (!Number.isInteger(parsedRoomId) || parsedRoomId < 1))) {
+      return res.status(400).json({ error: 'Invalid sectionSubjectId, roomId, or dayOfWeek.' })
     }
-    const slot = await prisma.timetableSlot.create({
-      data: {
-        sectionSubjectId: parseInt(sectionSubjectId),
-        dayOfWeek: parseInt(dayOfWeek),
+
+    try {
+      validateTimeRange(startTime, endTime)
+    } catch (error) {
+      return res.status(400).json({ error: error.message })
+    }
+
+    const slot = await prisma.$transaction(async (tx) => {
+      const sectionSubject = await tx.sectionSubject.findUnique({
+        where: { id: parsedSectionSubjectId },
+        select: { id: true }
+      })
+
+      if (!sectionSubject) {
+        return null
+      }
+
+      if (parsedRoomId !== null) {
+        const room = await tx.room.findUnique({ where: { id: parsedRoomId }, select: { id: true } })
+        if (!room) return undefined
+      }
+
+      const conflicts = await findTimetableConflicts(tx, {
+        sectionSubjectId: parsedSectionSubjectId,
+        roomId: parsedRoomId,
+        dayOfWeek: parsedDayOfWeek,
         startTime,
         endTime
-      },
-      include: { sectionSubject: { include: { section: true, subject: true } } }
+      })
+
+      if (conflicts.length > 0) {
+        return { conflicts }
+      }
+
+      return tx.timetableSlot.create({
+        data: {
+          sectionSubjectId: parsedSectionSubjectId,
+          roomId: parsedRoomId,
+          dayOfWeek: parsedDayOfWeek,
+          startTime,
+          endTime
+        },
+        include: { sectionSubject: { include: { section: true, subject: true } } }
+      })
     })
+
+    if (slot === null) return res.status(404).json({ error: 'Section subject not found.' })
+    if (slot === undefined) return res.status(404).json({ error: 'Room not found.' })
+    if (slot.conflicts) {
+      return res.status(409).json({
+        error: 'Timetable slot overlaps an existing section, faculty, or room booking.',
+        conflicts: slot.conflicts
+      })
+    }
+
     res.status(201).json(slot)
   } catch (error) { next(error) }
 }
@@ -420,6 +585,7 @@ exports.generateLectureSessions = async (req, res, next) => {
       for (const slot of matchingSlots) {
         sessionsToCreate.push({
           sectionSubjectId: slot.sectionSubjectId,
+          roomId: slot.roomId,
           date: new Date(current),
           startTime: slot.startTime,
           endTime: slot.endTime,
