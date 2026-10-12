@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { CalendarDays, CheckCircle2, Clock3, ClipboardCheck, LayoutDashboard, Loader2, MessageSquareText, ShieldAlert, UserRound } from "lucide-react";
 import { useAuth } from "../auth/hooks/useAuth";
 import DashboardShell from "../../components/DashboardShell";
@@ -84,7 +83,6 @@ const navItems = [
 
 export default function FacultyDashboard() {
   const { user, handleLogout } = useAuth();
-  const navigate = useNavigate();
   const [schedule, setSchedule] = useState([]);
   const [selectedSessionId, setSelectedSessionId] = useState("");
   const [sessionData, setSessionData] = useState(null);
@@ -211,9 +209,9 @@ export default function FacultyDashboard() {
     }
   };
 
+  // Context navigates to /login itself; no double navigation needed.
   const handleLogoutSubmit = async () => {
     await handleLogout();
-    navigate("/login");
   };
 
   const totalSessionsToday = schedule.length;

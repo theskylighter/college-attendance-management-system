@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { AlertTriangle, BarChart3, Building2, CalendarClock, GraduationCap, LayoutDashboard, MapPin, Pencil, PlusCircle, Trash2, Users, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useAuth } from "../auth/hooks/useAuth";
 import DashboardShell from "../../components/DashboardShell";
@@ -37,7 +36,6 @@ const formatDateTime = (value) => {
 
 export default function AdminDashboard() {
   const { user, handleLogout } = useAuth();
-  const navigate = useNavigate();
   const [rooms, setRooms] = useState([]);
   const [escalations, setEscalations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -159,10 +157,9 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogoutSubmit = async (event) => {
-    event.preventDefault();
+  // DashboardShell calls onLogout with no event arg; context navigates to /login.
+  const handleLogoutSubmit = async () => {
     await handleLogout();
-    navigate("/login");
   };
 
   const handleTabChange = (tab) => {

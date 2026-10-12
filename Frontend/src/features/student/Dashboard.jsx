@@ -17,7 +17,6 @@ import {
   ProfilePanel,
   SchedulePanel,
 } from "./components/StudentPanels";
-import { useNavigate } from "react-router-dom";
 import { CheckCircle2, X } from "lucide-react";
 import CorrectionModal from "./components/CorrectionModal";
 import EscalationModal from "./components/EscalationModal";
@@ -36,7 +35,6 @@ const responseItems = (response) => response?.data?.data ?? response?.data ?? []
 
 export default function StudentDashboard() {
   const { user, handleLogout } = useAuth();
-  const navigate = useNavigate(); 
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dashboardData, setDashboardData] = useState(emptyDashboardData);
   const [loading, setLoading] = useState(true);
@@ -53,10 +51,9 @@ export default function StudentDashboard() {
   const [selectedEscalation, setSelectedEscalation] = useState(null);
   const [toastMessage, setToastMessage] = useState("");
 
-  const handleLogoutSubmit = async (event) => {
-    event.preventDefault();
+  // DashboardShell calls onLogout with no event arg; context navigates to /login.
+  const handleLogoutSubmit = async () => {
     await handleLogout();
-    navigate("/login");
   };
 
   const loadDashboard = useCallback(async (silent = false) => {

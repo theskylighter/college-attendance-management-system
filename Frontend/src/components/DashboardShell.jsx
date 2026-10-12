@@ -165,6 +165,19 @@ export default function DashboardShell({
                 </button>
               );
             })}
+            {/* Logout lives in the profile menu on sm+ screens; the menu
+                toggle is hidden on mobile, so expose logout here instead. */}
+            <button
+              key="logout"
+              type="button"
+              onClick={async () => {
+                await onLogout?.();
+              }}
+              className="flex min-w-[76px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
           </div>
         </nav>
       )}
