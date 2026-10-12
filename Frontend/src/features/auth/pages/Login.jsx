@@ -20,6 +20,32 @@ const roles = [
   { id: "ADMIN", label: "Admin", Icon: ShieldCheck },
 ];
 
+// Seeded demo accounts (Backend/prisma/seed.js, password "demo123").
+// Shown on the login page so reviewers can try each role with one click.
+const DEMO_ACCOUNTS = [
+  {
+    role: "ADMIN",
+    label: "Admin",
+    Icon: ShieldCheck,
+    email: "admin@college.edu",
+    password: "demo123",
+  },
+  {
+    role: "FACULTY",
+    label: "Faculty",
+    Icon: Users,
+    email: "priya.sharma@college.edu",
+    password: "demo123",
+  },
+  {
+    role: "STUDENT",
+    label: "Student",
+    Icon: GraduationCap,
+    email: "aarav.singh@college.edu",
+    password: "demo123",
+  },
+];
+
 const Login = () => {
   const { handleLogin, loading } = useAuth();
   const navigate = useNavigate();
@@ -31,6 +57,13 @@ const Login = () => {
 
   const passwordType = showPassword ? "text" : "password";
   const canSubmit = email.trim() && password.trim();
+
+  const fillDemoAccount = (demo) => {
+    setError("");
+    setRole(demo.role);
+    setEmail(demo.email);
+    setPassword(demo.password);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -236,6 +269,42 @@ const Login = () => {
                   {error}
                 </div>
               )}
+
+              {/* Demo accounts for reviewers */}
+              <div>
+                <div className="mb-3 flex items-center gap-4 text-slate-400">
+                  <div className="h-px flex-1 bg-slate-200" />
+                  <span className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    Try a demo account
+                  </span>
+                  <div className="h-px flex-1 bg-slate-200" />
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {DEMO_ACCOUNTS.map((demo) => {
+                    const DemoIcon = demo.Icon;
+                    return (
+                      <button
+                        key={demo.role}
+                        type="button"
+                        onClick={() => fillDemoAccount(demo)}
+                        title={`Fill ${demo.email} / demo password`}
+                        className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 transition-all hover:border-[#0b2a55] hover:bg-[#d6e3ff]/50"
+                      >
+                        <span className="flex items-center gap-1.5 text-sm font-semibold text-[#0b2a55]">
+                          <DemoIcon className="h-4 w-4 shrink-0" />
+                          {demo.label}
+                        </span>
+                        <span className="max-w-full truncate text-xs text-slate-500">
+                          {demo.email}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  Fills the form with demo credentials — just press Log In.
+                </p>
+              </div>
 
               <button
                 type="submit"
