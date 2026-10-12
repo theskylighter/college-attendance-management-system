@@ -3,6 +3,8 @@ const morgan = require('morgan')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const rateLimit = require('express-rate-limit')
+const fs = require('fs')
+const path = require('path')
 
 // require all the routes here 
 const authRouter = require('./routes/auth.routes')
@@ -60,10 +62,28 @@ app.use('/api/student', studentRouter)
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok' }))
 
-// 404 handler
-app.use((req, res) => {
+// 404 handler for unknown API routes (must sit after /api routers,
+// before the SPA fallback so client-side routes still resolve)
+app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Route not found' })
 })
+
+// Single-origin deployment: serve the Vite build alongside the API.
+// distDir resolves to <repo>/Frontend/dist whether the process runs
+// from Backend/ (Render rootDir) or the repo root (local).
+const distDir = path.resolve(__dirname, '..', '..', 'Frontend', 'dist')
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir, { index: false, maxAge: '1h' }))
+
+  // SPA fallback for BrowserRouter: any GET that accepts HTML and
+  // wasn't handled above serves index.html (client-side routing).
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || !req.accepts('html')) return next()
+    res.sendFile(path.join(distDir, 'index.html'))
+  })
+} else {
+  console.warn(`[app] SPA build not found at ${distDir} — serving API only`)
+}
 
 // Global error handler : 4 args
 app.use((err, req, res, next) => {

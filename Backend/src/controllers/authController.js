@@ -5,13 +5,13 @@ const prisma = require('../lib/prisma')
 
 const JWT_SECRET = process.env.JWT_SECRET
 
-// Frontend and backend run on different hosts (e.g. *.onrender.com subdomains),
-// so the auth cookie must be readable cross-site: SameSite=None + Secure.
+// Single-origin deployment (Express serves the SPA + /api from one host),
+// so the auth cookie can stay SameSite=Strict.
 // `secure: true` also works on http://localhost (secure context per spec).
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: true,
-  sameSite: 'none',
+  sameSite: 'strict',
   path: '/',
   maxAge: 24 * 60 * 60 * 1000 // 1 day
 }
