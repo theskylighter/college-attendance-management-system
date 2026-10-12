@@ -1,0 +1,55 @@
+# Render Blueprint: Classroom Attendance Management System
+# Deploy via dashboard (New + -> Blueprint, connect repo) or after
+# `render login` via CLI-created services (see README/commands below).
+#
+# Database: external TiDB Cloud MySQL (see Backend/.env locally).
+# Render has no managed MySQL, so DATABASE_URL is entered at deploy
+# time (sync: false) and never committed to git.
+
+services:
+  # ── Backend API (Node + Express + Prisma/MySQL) ──────────────────────
+  - type: web
+    name: cams-backend
+    runtime: node
+    region: singapore # closest to TiDB ap-southeast-1, minimizes DB latency
+    rootDir: Backend
+    plan: free # sleeps when idle; use `starter`+ for always-on
+    buildCommand: npm install && npx prisma generate && npx prisma migrate deploy
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: DATABASE_URL
+        sync: false # paste TiDB connection string at deploy time
+      - key: JWT_SECRET
+        generateValue: true # Render generates a strong secret
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: cams-frontend
+          property: host # bare hostname; app.js adds https://
+
+  # ── Frontend SPA (Vite + React, served as static site) ───────────────
+  - type: web
+    name: cams-frontend
+    env: static
+    region: singapore
+    rootDir: Frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html # SPA fallback for react-router
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: cams-backend
+          property: host # bare hostname; axios.js adds https:// + /api

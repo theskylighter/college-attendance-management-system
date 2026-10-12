@@ -28,8 +28,17 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts. Please try again later.' }
 })
 
+// Render's fromService wiring supplies a bare hostname
+// (my-app.onrender.com); CORS origins need a scheme, so normalize.
+function resolveFrontendOrigin() {
+  const raw = (process.env.FRONTEND_URL || '').trim()
+  if (!raw) return 'http://localhost:5173'
+  if (/^https?:\/\//i.test(raw)) return raw
+  return `https://${raw}`
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: resolveFrontendOrigin(),
   credentials: true
 }))
 app.use(morgan('dev'))
