@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, BarChart3, Building2, CalendarClock, GraduationCap, LayoutDashboard, MapPin, Pencil, PlusCircle, Trash2, Users, ShieldCheck, ShieldAlert } from "lucide-react";
+import { AlertTriangle, BarChart3, Building2, CalendarClock, GraduationCap, LayoutDashboard, MapPin, Pencil, PlusCircle, Trash2, Users, UserRound, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useAuth } from "../auth/hooks/useAuth";
 import DashboardShell from "../../components/DashboardShell";
+import AccountProfilePanel from "../../components/AccountProfilePanel";
 import { createRoom, decideEscalation, deleteRoom, getEscalatedCorrections, getRooms, updateRoom } from "./admin.api";
 import AdminOperationsPanel from "./components/AdminOperationsPanel";
 
@@ -13,6 +14,7 @@ const navItems = [
   { id: "timetable", label: "Timetable", icon: CalendarClock },
   { id: "escalations", label: "Escalations", icon: ShieldAlert },
   { id: "reports", label: "Reports", icon: BarChart3 },
+  { id: "profile", label: "Profile", icon: UserRound },
 ];
 
 const EMPTY_FORM = {
@@ -173,6 +175,7 @@ export default function AdminDashboard() {
       roleLabel="Administrator Portal"
       user={user}
       onLogout={handleLogoutSubmit}
+      onProfileShow={() => setActiveTab("profile")}
       navItems={navItems}
       activeTab={activeTab}
       onTabChange={handleTabChange}
@@ -434,6 +437,20 @@ export default function AdminDashboard() {
             </div>
           )}
         </section>
+        )}
+        {activeTab === "profile" && (
+          <AccountProfilePanel
+            user={user}
+            eyebrow="Administrator Profile"
+            title="Your account"
+            subtitle="Your administrator account with full institutional access."
+            rows={[
+              { label: "Role", value: user?.role },
+              { label: "Email", value: user?.email },
+              { label: "User ID", value: user?.id != null ? String(user.id) : "" },
+              { label: "Access", value: "Full institutional access" },
+            ]}
+          />
         )}
       </div>
     </DashboardShell>

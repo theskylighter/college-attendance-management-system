@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, CheckCircle2, Clock3, ClipboardCheck, LayoutDashboard, Loader2, MessageSquareText, ShieldAlert, UserRound } from "lucide-react";
 import { useAuth } from "../auth/hooks/useAuth";
 import DashboardShell from "../../components/DashboardShell";
+import AccountProfilePanel from "../../components/AccountProfilePanel";
 import {
   bulkMarkAttendance,
   decideCorrection,
@@ -79,6 +80,7 @@ const navItems = [
   { id: "schedule", label: "Schedule", icon: CalendarDays },
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "corrections", label: "Corrections", icon: MessageSquareText },
+  { id: "profile", label: "Profile", icon: UserRound },
 ];
 
 export default function FacultyDashboard() {
@@ -240,6 +242,7 @@ export default function FacultyDashboard() {
         roleLabel="Faculty Portal"
         user={user}
         onLogout={handleLogoutSubmit}
+        onProfileShow={() => setActiveTab("profile")}
         navItems={navItems}
         activeTab="overview"
       >
@@ -262,6 +265,7 @@ export default function FacultyDashboard() {
       roleLabel="Faculty Portal"
       user={user}
       onLogout={handleLogoutSubmit}
+      onProfileShow={() => setActiveTab("profile")}
       navItems={navItems}
       activeTab={activeTab}
       onTabChange={handleTabChange}
@@ -413,8 +417,7 @@ export default function FacultyDashboard() {
           </section>
         </div>
 
-        <section id="faculty-corrections" className={`${activeTab !== "overview" && activeTab !== "corrections" ? "hidden " : ""}scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-[0_18px_40px_rgba(0,33,71,0.06)] sm:p-6`}>
-          <div className="flex items-center justify-between gap-3">
+        <section id="faculty-corrections" className={`${activeTab !== "overview" && activeTab !== "corrections" ? "hidden " : ""}scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-[0_18px_40px_rgba(0,33,71,0.06)] sm:p-6`}>          <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Corrections</p>
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Pending correction review</h2>
@@ -489,6 +492,22 @@ export default function FacultyDashboard() {
               })
             )}
           </div>
+        </section>
+
+        <section id="faculty-profile" className={`${activeTab !== "profile" ? "hidden " : ""}scroll-mt-24`}>
+          <AccountProfilePanel
+            user={user}
+            eyebrow="Faculty Profile"
+            title="Your account"
+            subtitle="Your teaching profile as registered by the administration."
+            rows={[
+              { label: "Role", value: user?.role },
+              { label: "Email", value: user?.email },
+              { label: "Employee ID", value: user?.facultyProfile?.employeeId },
+              { label: "Department", value: user?.facultyProfile?.department?.name },
+              { label: "Dept. Code", value: user?.facultyProfile?.department?.code },
+            ]}
+          />
         </section>
       </div>
     </DashboardShell>

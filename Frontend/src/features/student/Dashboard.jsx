@@ -245,6 +245,7 @@ export default function StudentDashboard() {
       onTabChange={(nextTab) => setActiveTab(tabs.includes(nextTab) ? nextTab : "dashboard")}
       user={user}
       onLogout={handleLogoutSubmit}
+      onProfileShow={() => setActiveTab("profile")}
     >
       <div className="space-y-5">
         {toastMessage && (

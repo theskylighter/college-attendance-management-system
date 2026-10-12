@@ -132,12 +132,56 @@ const logout = (req, res) => {
 
 const getMe = async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.user.userId } })
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      include: {
+        studentProfile: {
+          include: {
+            section: { include: { department: true } },
+          },
+        },
+        facultyProfile: {
+          include: { department: true },
+        },
+      },
+    })
     if (!user) {
       return res.status(404).json({ error: 'User not found.' })
     }
+    const { passwordHash: _, studentProfile, facultyProfile, ...safeUser } = user
     return res.status(200).json({
-      user: { id: user.id, name: user.name, email: user.email, role: user.role }
+      user: {
+        ...safeUser,
+        studentProfile: studentProfile
+          ? {
+              rollNumber: studentProfile.rollNumber,
+              section: studentProfile.section
+                ? {
+                    name: studentProfile.section.name,
+                    batchYear: studentProfile.section.batchYear,
+                    programType: studentProfile.section.programType,
+                    department: studentProfile.section.department
+                      ? {
+                          name: studentProfile.section.department.name,
+                          code: studentProfile.section.department.code,
+                        }
+                      : null,
+                  }
+                : null,
+            }
+          : null,
+        facultyProfile: facultyProfile
+          ? {
+              employeeId: facultyProfile.employeeId,
+              department: facultyProfile.department
+                ? {
+                    name: facultyProfile.department.name,
+                    code: facultyProfile.department.code,
+                  }
+                : null,
+            }
+          : null,
+      }
     })
   } catch (error) {
     next(error)

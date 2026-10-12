@@ -17,12 +17,13 @@ const navItems = [
   { id: "profile", label: "Profile", icon: UserRound },
 ];
 
-export default function StudentShell({ activeTab, onTabChange, user, onLogout, children }) {
+export default function StudentShell({ activeTab, onTabChange, user, onLogout, onProfileShow, children }) {
   return (
     <DashboardShell
       roleLabel="Student Portal"
       user={user}
       onLogout={onLogout}
+      onProfileShow={onProfileShow}
       navItems={navItems}
       activeTab={activeTab}
       onTabChange={onTabChange}
