@@ -51,6 +51,20 @@ Streamlined interface for recording attendance, processing student correction re
 ### Student Portal
 Intuitive dashboard for monitoring attendance status, submitting correction requests, and receiving real-time notifications.
 
+## Live Demo
+
+Deployed on Render (single service, Express serves the API and the Vite SPA from one origin):
+
+**https://academia-link.onrender.com**
+
+> Note: the free plan sleeps when idle, so the first request after inactivity can take ~30 seconds to respond.
+
+## Screenshots
+
+[![Student dashboard — attendance overview](docs/screenshots/01-student-dashboard.png)](docs/SHOWCASE.md)
+
+**[View the full walkthrough (19 screenshots) →](docs/SHOWCASE.md)** — student, faculty, and administrator portals.
+
 ## Project Structure
 
 ```text
