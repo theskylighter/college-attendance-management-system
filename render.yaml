@@ -8,7 +8,7 @@
 
 services:
   - type: web
-    name: classroom-attendance
+    name: theskylighter-cams
     runtime: node
     region: singapore # closest to TiDB ap-southeast-1, minimizes DB latency
     rootDir: Backend
