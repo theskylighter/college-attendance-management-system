@@ -5,6 +5,17 @@ const prisma = require('../lib/prisma')
 
 const JWT_SECRET = process.env.JWT_SECRET
 
+// Frontend and backend run on different hosts (e.g. *.onrender.com subdomains),
+// so the auth cookie must be readable cross-site: SameSite=None + Secure.
+// `secure: true` also works on http://localhost (secure context per spec).
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  path: '/',
+  maxAge: 24 * 60 * 60 * 1000 // 1 day
+}
+
 const register = async (req, res, next) => {
   try {
     // 1. Check validation errors from express-validator
@@ -100,12 +111,7 @@ const login = async (req, res, next) => {
     )
 
     // Set token in HTTP-only cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000 // 1 day
-    })
+    res.cookie('token', token, COOKIE_OPTIONS)
 
     return res.status(200).json({
       message: 'Login successful.',
@@ -117,11 +123,8 @@ const login = async (req, res, next) => {
 }
 
 const logout = (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  })
+  // clearCookie must repeat the attributes or the browser keeps the cookie
+  res.clearCookie('token', COOKIE_OPTIONS)
   return res.status(200).json({
     message: 'Logged out successfully.',
   })

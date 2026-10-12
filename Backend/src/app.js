@@ -12,6 +12,10 @@ const studentRouter = require('./routes/student.routes')
 
 const app = express()
 
+// Render terminates TLS at its proxy and forwards plain HTTP;
+// trust it so req.secure/protocol and secure cookies behave correctly.
+app.set('trust proxy', 1)
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
